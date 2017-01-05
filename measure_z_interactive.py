@@ -1,0 +1,741 @@
+#!/usr/bin/env python
+##################################################################################
+##################################################################################
+# get_z_interactive.py By Nathaniel R. Ross, UCLA, nross@astro.ucla.edu
+# usage: python get_z_interactive.py line_list
+# Reads in list of emission lines from the WISP survey HST/WFC3/IR Grisms and 
+# plots the spectra, iterates through the detected emission lines, allowing the 
+# user to make line identifications or reject spurious lines quickly and 
+# efficiently.
+#
+# Version 1.0 updates the program to look for wavelength-calibrated 2d grism 
+# stamps first. Also, will now look for default line list name and make 
+# linelistfile an optional parameter. Furthermore, I have added the option 
+# to save the incomplete line list to file as you progress, but default is NOT to 
+# do this.
+# Optional arguments for go() are 1. linelistfile (String) - path to line list file
+#                                 2. save_temp (Bool) - Save progress in 
+#                                    linelist/Par???lines_with_redshifts.incomplete.dat
+#                                 3. recover_temp (Bool) - Recover progress from previous 
+#                                    session using the .incomplete.dat files
+#
+# ** Major change in version 1.0:
+# We now use xpa instead of IRAF to display the 2d grism stamps and full 2d 
+# direct images (instead of cutout stamp). Reason for this change was the desire
+# to show the grism stamps that have a wavelength solution applied. When using 
+# the IRAF display command, ds9 would fail to recognize this coordinate system.
+# The XPA system can be downloaded here: http://hea-www.harvard.edu/RD/xpa/index.html
+#
+##################################################################################
+import os
+import distutils
+#import numpy as np
+import scipy
+import pylab as plt
+from scipy.interpolate import spline
+from distutils.sysconfig import *    ### question-- what is this for? 
+import sys
+from wisp import *
+
+def isFloat(string):
+    try:
+        float(string)
+        return True
+    except ValueError:
+        return False
+
+
+
+def getzeroorders (zeroorderpath,g='G141',magcut=23.5): # MB: changed from 23.0
+    zop=open(zeroorderpath,'r')
+    zox=[]
+    zoy=[]
+    zoid=[]
+    zmag=[]
+    for line in zop:
+        if len(line)>60:
+            linesplit = line.split()
+            zox.append(float(linesplit[1][0:-1]))
+            zoy.append(float(linesplit[2][0:-3])) 
+            zoid.append(int(linesplit[-2].split('{')[-1]))
+            zmag.append(float(linesplit[-1][1:-2]))  ### get mag from reg file
+
+    zop.close()
+    zoid=np.array(zoid)
+    zoy=np.array(zoy)
+    zox=np.array(zox)
+    zmag=np.array(zmag)
+    cond = (zmag <= magcut)
+    return zox[cond],zoy[cond],zoid[cond]
+
+
+def getfirstorders (firstorderpath):
+    fop=open(firstorderpath,'r')
+    fox=[]
+    foy=[]
+    folen=[]
+    fowid=[]
+    foid=[]
+    for line in fop:
+        #if line[0]!='#':
+        linesplit = line.split() 
+        fox.append(float( linesplit[1][0:-1] ))  ### [0:-1] strips off the comma. 
+        foy.append(float(linesplit[2][0:-1]))
+        folen.append(float(linesplit[3][0:-1])) 
+        fowid.append(float(linesplit[-1].split('{')[-1].split('}')[0]))  ### python is weird.
+    return (fox,foy,folen,fowid,foid)
+
+
+def measure_z_interactive (linelistfile=" ", show_dispersed=True):
+    #### STEP 1:   get linelist ###############################################
+    ###########################################################################
+    if linelistfile==" ":
+        ### check the .dat files to find the ParXXX, which is in the name of the linelistfile 
+        allDirectoryFiles=os.listdir('.')
+        for files in allDirectoryFiles:
+            if files[0:3]=='Par':
+                llpts=files.split('_')
+                linelistfile='linelist/'+llpts[0]+'lines.dat'
+                break
+
+    #### throw an error or print that the linelistfile is found         
+    if linelistfile==" " or os.path.exists(linelistfile)==0:
+        print "Invalid path to line list file: %s" % (linelistfile)
+        return 0
+    else:
+        print "Found line list file %s" % (linelistfile)
+
+    #### STEP 2:   read the list of candidate lines  ####################
+    ###########################################################################
+    llin = asciitable.read(linelistfile, names = ['parnos', 'grism', 'objid', 'wavelen', 'npix', 'ston', 'flag']) 
+    parnos = llin['parnos']
+    grism = llin['grism']
+    objid = llin['objid'] 
+    wavelen = llin['wavelen'] 
+    npix = llin['npix'] 
+    ston = llin['ston'] 
+    #flag  = llin['flag']   ## these flags are defined line-by-line and are not useful in the object-by-object context 
+    nstart =0
+    objid_unique = np.unique(objid) 
+
+    #parnos,grism,objid,wavelen,npix,ston,flag,nstart,setzs,flagcont,comment=readll(linelistfile,recover_temp)
+    #### STEP 3: define other filenames ############################
+    #########################################################################
+    ##### these are for recovering/storing partially complete work
+
+    parts=linelistfile.split('.')
+    linelistoutfile=parts[0]+'_catalog.'+parts[1]
+    commentsfile = parts[0]+'_comments.'+parts[1]
+    
+    if os.path.isfile(linelistoutfile):
+        print '\n Output file: \n  %s, \nalready exists\n' % linelistoutfile
+        ask = raw_input('Append? [y/n] ')
+        if ask.lower() == 'n':
+           os.unlink(linelistoutfile) 
+           os.unlink(commentsfile) 
+        else : 
+           ### because the comments are not machine readable, we have to do this the hard way.  
+           f = open(commentsfile) 
+           objid_done = [] 
+           for line in f:
+               x = line.split() 
+               objid_done.append(float(x[1])) 
+           objid_done = np.max(np.array(objid_done))
+           w=np.where(objid_unique > objid_done) 
+           #### note that objid_done only includes good objects. therefore 
+           #w will return the last n objects that you decided were crap.  Sorry about that.
+           nstart = w[0][0]
+           print nstart
+           if np.size(nstart) == 0:
+               print "You've finished this field." 
+               return 0 
+               
+
+
+   
+   
+    #### STEP 4: create trace.reg files ############################
+    #########################################################################
+    trace102 = open('G102_trace.reg', 'w')
+    trace102.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
+    trace102.write('wcs;\n')
+    trace102.write('box(9950,0,3100,1,1.62844e-12)\n')
+    trace102.close()
+    trace141 = open('G141_trace.reg', 'w')
+    trace141.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
+    trace141.write('wcs;\n')
+    trace141.write('box(14142.49,0,5500,1,0)\n')
+    trace141.close()
+
+
+
+    ##### STEP 5:  defined some wavelengths; these will be used later for plotting.##### 
+    ####################################################################################
+    lam_Halpha=6563.0
+    lam_Hbeta=4861.0
+    lam_Oiii_1=4959.0
+    lam_Oiii_2=5007.0
+    lam_Oii=3727.0
+    lam_Sii=6724.0
+    lam_Siii_1=9069.0
+    lam_Siii_2=9532.0
+    #lam_Lya=1216.0
+    lam_He=10830.0
+    lam_Fe=12600.0
+    lam_Pag=10940.0
+    lam_Pab=12810.0
+    
+    suplines=[lam_Oii,lam_Hbeta,lam_Oiii_1,lam_Oiii_2,lam_Halpha,lam_Sii,lam_Siii_1,lam_Siii_2,lam_He,lam_Pag,lam_Fe,lam_Pab]
+    
+    
+    #### STEP 6:  Get zero and first order positions; unpack them #############
+    #########################################################################
+    g102zeroarr=[]
+    g102firstarr=[]
+    g102zeroordreg="../DATA/DIRECT_GRISM/G102_0th.reg"
+    g102firstordreg="../DATA/DIRECT_GRISM/G102_1st.reg"
+    if os.path.exists(g102zeroordreg)==1:
+        g102zeroarr=getzeroorders(g102zeroordreg,g='G102')
+        g102firstarr=getfirstorders(g102firstordreg)
+
+    g141zeroarr=[]
+    g141firstarr=[]
+    g141zeroordreg="../DATA/DIRECT_GRISM/G141_0th.reg"
+    g141firstordreg="../DATA/DIRECT_GRISM/G141_1st.reg"
+    if os.path.exists(g141zeroordreg)==1:
+        g141zeroarr=getzeroorders(g141zeroordreg)
+        g141firstarr=getfirstorders(g141firstordreg)
+        
+    if len(g102zeroarr)>0:
+        g102zerox=g102zeroarr[0]
+        g102zeroy=g102zeroarr[1]
+        g102zeroid=g102zeroarr[2]
+        g102firstx=g102firstarr[0]
+        g102firsty=g102firstarr[1]
+        g102firstlen=g102firstarr[2]
+        g102firstwid=g102firstarr[3]
+        g102firstid=g102firstarr[4]
+    else:
+        g102zerox=[]
+        g102zeroy=[]
+        g102zeroid=[]
+        g102firstx=[]
+        g102firsty=[]
+        g102firstlen=[]
+        g102firstwid=[]
+        g102firstid=[]
+        
+    if len(g141zeroarr)>0:
+        g141zerox=g141zeroarr[0]
+        g141zeroy=g141zeroarr[1]
+        g141zeroid=g141zeroarr[2]
+        g141firstx=g141firstarr[0]
+        g141firsty=g141firstarr[1]
+        g141firstlen=g141firstarr[2]
+        g141firstwid=g141firstarr[3]
+        g141firstid=g141firstarr[4]
+    else:
+        g141zerox=[]
+        g141zeroy=[]
+        g141zeroid=[]
+        g141firstx=[]
+        g141firsty=[]
+        g141firstlen=[]
+        g141firstwid=[]
+        g141firstid=[]
+        
+
+
+    ###### STEP 7 ################################################################## 
+    ##### get the SEXtractor data on a_image, which gives an order of 
+    ##### magnitude estimate on the FWHM of the line. this determines the initial guess and sets an upper limit on how broad it can be.
+    
+    #### ALSO GET ra/dec, b_image, jmag, jerr, hmag, herr because these will be carried forward into the output linelist.
+
+    secat ="../DATA/DIRECT_GRISM/fin_f110.cat"
+    setab = asciitable.read(secat) 
+    beam_list = setab['col2']
+    a_image_list = setab['col5'] 
+    b_image_list = setab['col6'] 
+    ra_list = setab['col8'] 
+    dec_list =setab['col9'] 
+    jmag_list = setab['col13']
+    jerr_list = setab['col14'] 
+    secat2 = "../data/DIRECT_GRISM/fin_f160.cat" 
+    setab2 = asciitable.read(secat2) 
+    hmag_list = setab2['col13'] 
+    herr_list = setab2['col14'] 
+
+
+    ############################################################
+    #### what the heck does this do?   
+   # if recover_temp:
+   #     showDirectNEW(1,0)
+   #     if show_dispersed:  # MB
+   #         showDispersed(1,0)
+   
+
+    #### define some things... 
+    #progress=0.0
+    i=nstart   
+
+    ###### STEP 8 ########################################################### 
+    ### while loop through line/objects that need fitting####################
+    while i<len(objid_unique):
+        #### note progress. 
+        progress=float(i)/float(len(parnos))*100.0
+        print "Progress: %.1f percent" % (progress)
+        
+        ### get spectrum files for this particular object
+       
+        specname='Par' + str(parnos[0]) + '_BEAM_' + str(objid_unique[i]) + 'A.dat'
+        specnameg102='Par' + str(parnos[0]) + '_G102_BEAM_' + str(objid_unique[i]) + 'A.dat'   ### may not exist.
+        specnameg141='Par' + str(parnos[0]) + '_G141_BEAM_' + str(objid_unique[i]) + 'A.dat'
+        plotTitle='Par' + str(parnos[0]) + '_BEAM_' + str(objid[i])
+        if os.path.exists('figs') == False: 
+            os.mkdir('figs') 
+        plotfilename = 'figs/'+plotTitle + '_fit.pdf' 
+
+         
+        ##### also  start with a fresh set of config pars... we may change these during the interactive fitting. 
+        config_pars = read_config('default.config')
+
+        ### get line, fwhm, and z estimate
+        ### choose the lamline that has the highest s/n estimate 
+        w=np.where(objid == objid_unique[i]) 
+        w=w[0]
+        lamlines_found = wavelen[w] 
+        ston_found = ston[w] 
+        w=np.where(ston_found == np.max(ston_found)) 
+        w=w[0][0]
+        lamline = lamlines_found[w] 
+        zguess = lamline /6564. - 1
+
+        w=np.where(beam_list == objid_unique[i])
+        w=w[0][0]
+        fwhm_guess = 2.35 *  a_image_list[w] * config_pars['dispersion_red'] ### fwhm is defined for the red side, regardless of where line is.
+        zguess = lamline /6564. - 1   ### since we are working with the strongest line only, assume it is Ha. 
+        
+        ### also set ra, dec, etc. for this object
+        ra_obj = ra_list[w]
+        dec_obj = dec_list[w] 
+        a_image_obj = a_image_list[w] 
+        b_image_obj = b_image_list[w] 
+        jmag_obj = jmag_list[w] 
+        jerr_obj = jerr_list[w] 
+        hmag_obj= hmag_list[w] 
+        herr_obj = herr_list[w] 
+
+
+        #### show zero orders.   
+        if len(g102zerox)>0:
+            show2dNEW('G102',parnos[i],int(objid_unique[i]),g102firstx,g102firsty,g102firstlen,g102firstwid,g102firstid,g102zerox,g102zeroy,g102zeroid,'linear')
+                
+        if len(g141zerox)>0:
+            show2dNEW('G141',parnos[i],int(objid_unique[i]),g141firstx,g141firsty,g141firstlen,g141firstwid,g141firstid,g141zerox,g141zeroy,g141zeroid,'linear')
+            showDirectNEW(objid_unique[i],i)
+            if show_dispersed:  # MB
+               showDispersed(objid_unique[i],i)    
+
+        ### flag to determine whether we've measured the z or not. 
+        next=0
+        comment = ' '  ### in case comment isn't filled in, we can still write it.    
+        while (next==0):
+
+            ### do this every time because it is fast, and sometimes we re-read with mask or different transition wave.
+            #### read spectra and unpack  
+            if os.path.exists(specnameg102) == True: 
+               tab_blue = asciitable.read(specnameg102, names = ['lambda',  'flux', 'ferror', 'contam', 'zero']) 
+               tab_red =  asciitable.read(specnameg141,  names = ['lambda',  'flux', 'ferror', 'contam', 'zero'])
+               spdata = trim_spec(tab_blue, tab_red, config_pars)    ### this is a from the wisp package.
+            else: 
+               tab_red =  asciitable.read(specnameg141,  names = ['lambda',  'flux', 'ferror', 'contam', 'zero'])
+               spdata = trim_spec(None, tab_red, config_pars) 
+    
+            spec_lam = spdata[0]
+            spec_val = spdata[1]
+            spec_unc = spdata[2] 
+            spec_con = spdata[3] 
+            spec_zer = spdata[4] 
+            zero_ord = spec_val  * spec_zer
+
+            ##### do all the fitting
+            fit_inputs = [spec_lam, spec_val, spec_unc, config_pars, zguess, fwhm_guess, str(objid_unique[i])]
+            fitresults = fit_obj(fit_inputs)  ### parsing the inputs this way facilitates parallel processing when fitting is done in batch mode.
+            zfit = fitresults['redshift']
+            print "Guess Redshift z =  %f" % (zguess) 
+            print "Fit Redshift z =  %f" % (zfit)
+            lamobs = (1 + zguess) * np.array(suplines) 
+            fitpars = fitresults['fit_parameters'] 
+            fitpars_nolines = cp.deepcopy(fitpars) 
+            fitpars_nolines[9:19] = 0. 
+            fitpars_nolines[11] = 1.4  ### can't kill this one or divide by zero. 
+            fitpars_nolines[12] = 0.1
+            fitmodel = emissionline_model(fitpars, spec_lam) * fitresults['fit_scale_factor']  
+            contmodel = emissionline_model(fitpars_nolines, spec_lam) * fitresults['fit_scale_factor']  
+                
+            plt.ion()
+            plt.figure(1,figsize=(11,8))
+            plt.clf()
+            #plt.subplot(211)
+
+            xmin=spec_lam.min()-200.0
+            xmax=spec_lam.max()+200.0
+            ymin=spec_val.min()
+            ymax=1.5*spec_val.max()
+
+            plt.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r',spec_lam,zero_ord,'m', ls='steps')
+            
+            plt.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
+            ### plot observed wavelengths of all the possible lines. 
+            for li in lamobs :
+                plt.axvline(x=li, color ='b')
+            plt.axvline(x=lamline, color = 'r', lw=2)
+
+            plt.plot(spec_lam, fitmodel, color ='r', lw=1.5)
+            plt.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
+
+
+            ### find values of spec_lam nearest to the nodes 
+            nodelam = config_pars['node_wave']  
+            nl_arr = [] 
+            cont_node = [] 
+            for nl in nodelam: 
+                w=np.where(np.abs(spec_lam - nl)  == np.min(np.abs(spec_lam - nl)))
+                w=w[0][0]
+                nl_arr.append(spec_lam[w]) 
+                cont_node.append(contmodel[w]) 
+            plt.plot(nl_arr, cont_node, 'ko', ms=9) 
+
+
+            #### repeat for line_candidates  
+            lf_lam  = [] 
+            lf_cont = [] 
+            for lf in lamlines_found:  
+                w=np.where(np.abs(spec_lam - lf)  == np.min(np.abs(spec_lam -lf)))
+                w=w[0][0]
+                lf_lam.append(spec_lam[w]) 
+                lf_cont.append(contmodel[w]) 
+            plt.plot(lf_lam, lf_cont, 'bo', ms=9) 
+
+
+
+            plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
+            plt.ylabel(r'F$_\lambda$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$', size='xx-large')
+            plt.xlim([xmin, xmax])
+            plt.ylim([ymin, ymax])
+            plt.title(plotTitle)
+ 
+            #### second panel for s/n
+            #plt.subplot(212)
+            #s2n=(spec_val-contmodel)/spec_unc
+            #s2n_lam=spec_lam
+            #mask=np.logical_and(s2n>-10000., s2n<10000.)
+            #s2n=s2n[mask]
+            #s2n_lam=s2n_lam[mask]
+            #plt.plot(s2n_lam,s2n,'k-',linestyle='steps')
+            #plt.axhline(y=1.73,c='r')
+            #plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
+            #plt.ylabel(r'S/N',size='xx-large')
+            #plt.xlim([xmin, xmax])
+            fig = plt.gcf() 
+            fig.savefig(plotfilename)   ### saves the figure for everything; junk objects and all;  will repeat/overwrite while iterating on the interactive fit. 
+            plt.draw()
+            #plt.draw()   ### why is this here twice??? 
+            
+
+            ##### options: 
+            print "Enter option (read carefully, options have changed): \n \
+             \t b=back \n \
+             \t a=accept object fit \n \
+             \t ac=accept object fit, noting contamination\n  \
+             \t r=reject object \n \
+             \t z = enter a different z guess  \n \
+             \t ha,  or hb, o31, o32, o2, s2, s31, s32 =  change redshift guess \n \
+             \t fw = change the fwhm guess in pixels \n \
+             \t c=add comment \n \
+             \t t=change transition wavelength \n \
+             \t m1, m2, or m3 =mask up to three discontinuous wavelength regions \n \
+             \t nodes = change the wavelengths for the continuum spline nodes \n \
+             \t bluecut = change the blue cutoff of the G102 spec \n \
+             \t redcut  = change the red cutoff of the G141 spec \n \
+             \t reset = reset interactive options back default for this object \n \
+             \t lin=linear z-scale \n \
+             \t log=logarithmic  \n \
+             \t zs102=z1,z2 comma-separated range for G102 zscale \n  \
+             \t zs141=z1,z2 comma-separated range for G141 zscale \n  \
+             \t dc=recenter direct images \n \
+             \t dr=reload direct image reg files\n \
+             \t q=quit\n"
+            option = raw_input(">")
+            if option=='r':
+                next=1
+                zset =0 
+#            elif option=='rc':
+#                next=1
+#                flagcont = 3  
+#                zset=0
+            elif option=='a':
+                next=1
+                zset=1  ### the redshift is stored in "fitresults" 
+                flagcont=1 #MR   
+
+            elif option=='ac':
+                next=1
+                zset=1
+                flagcont = 2 
+
+
+            #### these options keep you iterating in the while loop    
+            elif option=='z':
+                print "Enter Redshift Guess:" 
+                zguess = float(raw_input(">")) 
+            elif option =='fw': 
+                print "Enter a Guess for FWHM in pixels"
+                print "The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] /config_pars['dispersion_red']) + " and 2* A_image is: " + str(2 * a_image_obj) 
+                fwhm_guess = config_pars['dispersion_red']  * float(raw_input(">"))
+	    elif option=='c': # Changed by NR version 0.2.5
+                print "Enter your comment here:"
+                comment =raw_input(">")
+            elif option == 'm1': 
+                print "Enter wavelength window to mask out:  blue, red:" 
+                maskstr = raw_input(">") 
+                maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
+                config_pars['mask_region1'] = maskwave 
+            elif option == 'm2': 
+                print "Enter wavelength window to mask out:  blue, red:" 
+                maskstr = raw_input(">") 
+                maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
+                config_pars['mask_region2'] = maskwave
+            elif option == 'm3': 
+                print "Enter wavelength window to mask out:  blue, red (Angstroms:" 
+                maskstr = raw_input(">") 
+                maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
+                config_pars['mask_region3'] = maskwave
+            elif option == 't': 
+                print "Enter the wavelength for the G102 to G141 transition:" 
+                config_pars['transition_wave'] = float(raw_input(">"))
+            elif option == 'nodes': 
+                print "Enter Wavelengths for Continuum Spline: w1, w2, w3, w4, ...." 
+                print "(current node wavelengths are):" + str(config_pars['node_wave'] )
+                nodestr = raw_input(">") 
+                nodesplit = nodestr.split(',')
+                node_arr = []
+                for nodelam in nodesplit: 
+                    node_arr.append(float(nodelam)) 
+                node_arr = np.array(node_arr) 
+                config_pars['node_wave'] = node_arr 
+            elif option == 'reset': 
+                print "Reset configuration parameters, fwhm guess, and zguess to default values" 
+                config_pars = read_config('default.config') 
+                fwhm_guess = 2.35 *  a_image_obj * config_pars['dispersion_red'] ### fwhm is defined for the red side, regardless of where line is.
+                zguess = lamline /6564. - 1 
+            elif option == 'bluecut' :
+                print "Change the blue cutoff of G102:"
+                config_pars['lambda_min'] = float(raw_input(">")) 
+            elif option == 'redcut': 
+                print "Chage the red cutoff of G141:" 
+                config_pars['lambda_max'] = float(raw_input(">")) 
+
+
+                
+            #### other lines      
+            elif option=='ha':
+                zguess=(lamline/lam_Halpha)-1
+            elif option=='hb':
+                zguess=(lamline/lam_Hbeta)-1
+            elif option=='o2':
+                zguess=(lamline/lam_Oii)-1
+            elif option=='o31':
+                zguess=(lamline/lam_Oiii_1)-1
+            elif option=='o32':
+                zguess=(lamline/lam_Oiii_2)-1
+            elif option=='s2':
+                zguess=(lamline/lam_Sii)-1
+            elif option=='s31':
+                zguess=(lamline/lam_Siii_1)-1
+            elif option=='s32':
+                zguess=(lamline/lam_Siii_2)-1
+            #elif option=='la':
+            #    zguess=(lamline/lam_Lya)-1
+            elif option=='b':
+                print "Going back."
+                i=i-2  ### below, it adds 1 to i before moving on.  so subtract 2 to go back one.
+                next=1
+            elif option=='q':
+                print "Quitting; saved through previously completed object."
+                return 0
+            
+
+
+            ### redo display things
+            elif option=='lin':
+                if len(g102zerox)>0:
+                    show2dNEW('G102',parnos[i],int(objid_unique[i]),g102firstx,g102firsty,g102firstlen,g102firstwid,g102firstid,g102zerox,g102zeroy,g102zeroid,'linear')
+                if len(g141zerox)>0:
+                    show2dNEW('G141',parnos[i],int(objid_unique[i]),g141firstx,g141firsty,g141firstlen,g141firstwid,g141firstid,g141zerox,g141zeroy,g141zeroid,'linear')
+            elif option=='log':
+                if len(g102zerox)>0:
+                    show2dNEW('G102',parnos[i],int(objid_unique[i]),g102firstx,g102firsty,g102firstlen,g102firstwid,g102firstid,g102zerox,g102zeroy,g102zeroid,'log')
+                if len(g141zerox)>0:
+                    show2dNEW('G141',parnos[i],int(objid_unique[i]),g141firstx,g141firsty,g141firstlen,g141firstwid,g141firstid,g141zerox,g141zeroy,g141zeroid,'log')
+            elif len(option)>6 and option[0:6]=='zs102=':
+                vals=option[6:]
+                zran=vals.split(',')
+                if len(zran)!=2 or isFloat(zran[0])==False or isFloat(zran[1])==False:
+                    print "Invalid zrange."
+                elif len(g102zerox)>0:
+                    show2dNEW('G102',parnos[i],int(objid_unique[i]),g102firstx,g102firsty,g102firstlen,g102firstwid,g102firstid,g102zerox,g102zeroy,g102zeroid,'linear',zran1=float(zran[0]),zran2=float(zran[1]))
+            elif len(option)>6 and option[0:6]=='zs141=':
+                vals=option[6:]
+                zran=vals.split(',')
+                if len(zran)!=2 or isFloat(zran[0])==False or isFloat(zran[1])==False:
+                    print "Invalid zrange."
+                elif len(g141zerox)>0:
+                    show2dNEW('G141',parnos[i],int(objid_unique[i]),g141firstx,g141firsty,g141firstlen,g141firstwid,g141firstid,g141zerox,g141zeroy,g141zeroid,'linear',zran1=float(zran[0]),zran2=float(zran[1]))
+            elif option=='dc':
+                showDirectNEW(objid_unique[i],i)
+                if show_dispersed:  # MB
+                    showDispersed(objid_unique[i],i)
+            elif option=='dr':
+                reloadReg()
+            else:
+                print "Invalid entry.  Try again."
+            print "OK"
+        
+        
+        if zset == 1:
+            WriteToCatalog(linelistoutfile, parnos[0], objid_unique[i],ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont)
+        ### write comments always 
+        WriteComments(commentsfile, parnos[0], objid_unique[i], comment)    ### if we go back to the previous objects, duplicate comments will still be written 
+       
+        i=i+1
+   # printLLout(linelistoutfile,parnos,grism,objid,wavelen,npix,ston,flag,flagcont,setzs,comment)
+    #printLCout(linelistoutfile_cont,parnos,grism,objid,wavelen,npix,ston,flag,flagcont,setzs,comment)
+   
+   
+   # Clean up temp files
+   # if save_temp:
+   #     if os.path.exists(lltemp)==1:
+   #         os.unlink(lltemp)
+   #     if os.path.exists(lctemp)==1:
+   #         os.unlink(lctemp)
+    if os.path.exists('./tempcoo.dat')==1:
+        os.unlink('./tempcoo.dat')
+    if os.path.exists('./temp_zero_coords.coo')==1:
+        os.unlink('./temp_zero_coords.coo')
+    if os.path.exists('./temp110.fits')==1:
+        os.unlink('./temp110.fits')
+    if os.path.exists('./temp140.fits')==1:
+        os.unlink('./temp140.fits')
+    if os.path.exists('./temp160.fits')==1:
+        os.unlink('./temp160.fits')
+    if os.path.exists('./temp_zero_coords.reg')==1:
+        os.unlink('./temp_zero_coords.reg')
+    if os.path.exists('G102_trace.reg') ==True:
+        os.unlink('G102_trace.reg') 
+    if os.path.exists('G141_trace.reg') == True: 
+        os.unlink('G141_trace.reg')
+    
+def WriteToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont): #parnos, objid are scalar not array. 
+    if os.path.exists(catalogname) == False: 
+        cat = open(catalogname, 'w') 
+        cat.write('#1  ParNo\n') 
+        cat.write('#2  ObjID\n') 
+        cat.write('#3 RA \n') 
+        cat.write('#4 Dec \n') 
+        cat.write('#5 Jmagnitude [99.0 denotes no detection] \n') 
+        cat.write('#6 Hmagnitude [99.0 denotes no detection] \n') 
+        cat.write('#7 A_IMAGE \n') 
+        cat.write('#8 B_IMAGE \n') 
+        cat.write('#9 redshift \n') 
+        cat.write('#10 redshift_err \n') 
+        cat.write('#11 dz_oiii \n') 
+        cat.write('#12 dz_oii \n') 
+        cat.write('#13 dz_siii_he1 \n') 
+        cat.write('#14 G141_FWHM_Obs  [Angs] \n') 
+        cat.write('#15 G141_FWHM_Obs_err  \n')  
+        cat.write('#16 oii_flux \n') 
+        cat.write('#17 oii_error \n')
+        cat.write('#18 oii_EW_obs \n')  
+        cat.write('#19 hg_flux \n') 
+        cat.write('#20 hg_err \n')  
+        cat.write('#21 hg_EW_obs \n') 
+        cat.write('#22 hb_flux \n') 
+        cat.write('#23 hb_err \n')  
+        cat.write('#24 hb_EW_obs \n') 
+        cat.write('#25 oiii_flux [both lines] \n') 
+        cat.write('#26 oiii_err [both lines] \n')  
+        cat.write('#27 oiii_EW_obs [both lines] \n') 
+        cat.write('#28 hanii_flux \n') 
+        cat.write('#29 hanii_err \n') 
+        cat.write('#30 hanii_EW_obs \n')  
+        cat.write('#31 sii_flux \n') 
+        cat.write('#32 sii_err \n') 
+        cat.write('#33 sii_EW_obs \n')  
+        cat.write('#34 siii_9069_flux \n') 
+        cat.write('#35 siii_9069_err \n') 
+        cat.write('#36 siii_9069_EW_obs \n') 
+        cat.write('#37 siii_9532_flux \n') 
+        cat.write('#38 siii_9532_err \n')  
+        cat.write('#39 siii_9532_EW_obs \n') 
+        cat.write('#40 he1_10830_flux \n') 
+        cat.write('#41 he1_10830_err \n') 
+        cat.write('#42 he1_10830_EW_obs \n') 
+        cat.write('#43 ContamFlag \n') 
+       # cat.write('#45 Comment \n') 
+
+
+    else: 
+        cat = open(catalogname , 'a') 
+    
+    outstr= '{:<8d}'.format(parnos) + \
+            '{:<6d}'.format(objid) +\
+            '{:<12.6f}'.format(ra_obj) + \
+            '{:<12.6f}'.format(dec_obj) + \
+            '{:<8.2f}'.format(jmag_obj) + \
+            '{:<8.2f}'.format(hmag_obj) + \
+            '{:<8.3f}'.format(a_image_obj) + \
+            '{:<8.3f}'.format(b_image_obj) + \
+            '{:>8.4f}'.format(fitresults['redshift']) + '{:>10.4f}'.format(fitresults['redshift_err']) +\
+            '{:>10.4f}'.format(fitresults['dz_oiii'])  + \
+            '{:>10.4f}'.format(fitresults['dz_oii'])   + \
+            '{:>10.4f}'.format(fitresults['dz_siii_he1']) +\
+            '{:>10.2f}'.format(fitresults['fwhm_g141']) + '{:>10.2f}'.format(fitresults['fwhm_g141_err'])  +  \
+            '{:>13.2e}'.format(fitresults['oii_flux'])  + '{:>13.2e}'.format(fitresults['oii_error']) +  '{:>13.2e}'.format(fitresults['oii_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['hg_flux']) + '{:>13.2e}'.format(fitresults['hg_error']) + '{:>13.2e}'.format(fitresults['hg_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['hb_flux']) + '{:>13.2e}'.format(fitresults['hb_error']) + '{:>13.2e}'.format(fitresults['hb_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['oiii_flux']) + '{:>13.2e}'.format(fitresults['oiii_error']) + '{:>13.2e}'.format(fitresults['oiii_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['hanii_flux']) + '{:>13.2e}'.format(fitresults['hanii_error']) + '{:>13.2e}'.format(fitresults['hanii_ew_obs']) + \
+            '{:>13.2e}'.format(fitresults['sii_flux']) + '{:>13.2e}'.format(fitresults['sii_error']) + '{:>13.2e}'.format(fitresults['sii_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['siii_9069_flux']) + '{:>13.2e}'.format(fitresults['siii_9069_error']) + '{:>13.2e}'.format(fitresults['siii_9069_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['siii_9532_flux']) + '{:>13.2e}'.format(fitresults['siii_9532_error']) + '{:>13.2e}'.format(fitresults['siii_9532_ew_obs']) +\
+            '{:>13.2e}'.format(fitresults['he1_flux']) + '{:>13.2e}'.format(fitresults['he1_error']) +  '{:>12.2e}'.format(fitresults['he1_ew_obs']) +\
+             '   ' + '{:<6d}'.format(flagcont) + ' \n' 
+
+
+    cat.write(outstr) 
+    cat.close()
+
+
+
+def WriteComments(filename, parnos, objid, comment):
+    if os.path.exists(filename) == False: 
+        cat = open(filename, 'w') 
+    else: 
+        cat  = open(filename, 'a') 
+
+    outstr = '{:<8d}'.format(parnos) + \
+            '{:<6d}'.format(objid) +\
+            comment +  '\n' 
+
+    cat.write(outstr) 
+    cat.close() 
+
+
+
+
+
+
+
+
