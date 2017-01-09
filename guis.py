@@ -2,7 +2,7 @@
 import astropy.io.fits as fits
 import numpy as np
 import os 
-from wisp import *
+from wisp_analysis import *
 from distutils.sysconfig import *
 
 

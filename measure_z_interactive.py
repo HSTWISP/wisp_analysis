@@ -35,7 +35,7 @@ import pylab as plt
 from scipy.interpolate import spline
 from distutils.sysconfig import *    ### question-- what is this for? 
 import sys
-from wisp import *
+from wisp_analysis import *
 
 def isFloat(string):
     try:

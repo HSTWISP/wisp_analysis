@@ -1,4 +1,4 @@
-from wisp import *
+from wisp_analysis import *
 import pdb 
 
 def find_cwt(lam, flux, err, fwhm_est_pix, beam_name, config_pars, plotflag = False):

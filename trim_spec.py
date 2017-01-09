@@ -1,4 +1,4 @@
-from wisp import *
+from wisp_analysis import *
 def trim_spec(tbdata_blue, tbdata_red,config_pars):
     #ext = hdu.index_of(beam_name) 
     #tbdata = hdu[ext].data  

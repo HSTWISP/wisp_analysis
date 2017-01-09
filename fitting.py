@@ -1,7 +1,8 @@
 #import numpy as np
 #import scipy.signal as si
 #from scipy import interpolate
-from wisp import *
+
+from wisp_analysis import *
 from mpfit import *
 
 def emissionline_model(pars, x): 
