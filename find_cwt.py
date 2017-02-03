@@ -1,5 +1,6 @@
 from wisp_analysis import *
-import pdb 
+import pdb
+#import os
 
 def find_cwt(lam, flux, err, fwhm_est_pix, beam_name, config_pars, plotflag = False):
     ###### inputs for fiddling:
@@ -22,6 +23,8 @@ def find_cwt(lam, flux, err, fwhm_est_pix, beam_name, config_pars, plotflag = Fa
     edge_reject = config_pars['edge_reject']      #### reject cwt detections within 5 pixcels of edge
     sn_thresh_cont_check = config_pars['n_sigma_above_cont'] ### in step2, require cwt line candidates to have npix_thresh abvove sn_threh_cont_check
     npix_thresh = config_pars['npix_thresh']  
+    min_line_contrast = config_pars['min_line_contrast']  ### minimum allowed ; rejects low EW lines. 
+
    
         
 
@@ -60,9 +63,18 @@ def find_cwt(lam, flux, err, fwhm_est_pix, beam_name, config_pars, plotflag = Fa
     if plotflag == True: 
         axarr[1].plot(lam[peaks], flux[peaks], 'ro', ms=7)
     peaks = np.array(peaks)
+
+
+    ### reject peaks near the edge 
     w= np.where( (peaks > edge_reject) & (peaks < np.size(lam) - edge_reject)) 
     peaks = peaks[w[0]]
-   
+    
+    ### reject lines with presumably low EWs 
+    peak_contrast = (flux[peaks] - cont_filter[peaks])/cont_filter[peaks] 
+    w=np.where(peak_contrast > min_line_contrast) 
+    peaks  = peaks[w[0]]
+
+     
     if np.size(peaks) > 0:
     
         ### count contiguous pixels above the noise threshold: 
@@ -102,31 +114,33 @@ def find_cwt(lam, flux, err, fwhm_est_pix, beam_name, config_pars, plotflag = Fa
 
             npix_peak.append(pixel_count)
             #### crudely estimate the snr of each line candidate
-            #w=np.where( (lam > lam[i] - 0.5 * fwhm_est) & (lam < lam[i] + 0.5 * fwhm_est)) 
-            w=range(i-int(0.5 *fwhm_est_pix), i+ int(0.5 * fwhm_est_pix)) 
-
+            
             if lam[i] > config_pars['transition_wave']: 
                 disp_est = config_pars['dispersion_red'] 
             else: 
                 disp_est = config_pars['dispersion_blue']
 
-            #line_signal_guess = np.sum( (flux[w] - cont_filter[w]) * disp_est)
-            #line_noise_guess =  np.sqrt(np.sum((err[w]* disp_est)**2 ) ) 
-            #line_snr_guess.append(line_signal_guess/line_noise_guess)
+            fwhm_est = fwhm_est_pix * disp_est
+           
+            w=np.where( (lam > lam[i] - 0.5 * fwhm_est) & (lam < lam[i] + 0.5 * fwhm_est)) 
+            #w=range(i-int(0.5 *fwhm_est_pix), i+ int(0.5 * fwhm_est_pix)) 
+
+    
+            line_signal_guess = np.sum( (flux[w] - cont_filter[w]) * disp_est)
+            line_noise_guess =  np.sqrt(np.sum((err[w]* disp_est)**2 ) ) 
+            line_snr_guess.append(line_signal_guess/line_noise_guess)
 
 
         npix_peak = np.array(npix_peak) 
-        #line_snr_guess = np.array(line_snr_guess) 
+        line_snr_guess = np.array(line_snr_guess) 
         w=np.where(npix_peak >= npix_thresh)# & (line_snr_guess > 1))  
         real_peaks = peaks[w[0]] 
         npix_real= npix_peak[w[0]] 
-
-
-        #snr_real = line_snr_guess[w[0]]
+        snr_real = line_snr_guess[w[0]]
     else:
          real_peaks = [] 
          npix_real = []
-         #snr_real = []
+         snr_real = []
          peaks = [] 
 
 
@@ -138,7 +152,7 @@ def find_cwt(lam, flux, err, fwhm_est_pix, beam_name, config_pars, plotflag = Fa
             #plt.savefig(figname)
             #plt.close()
             plt.show(block=True)
-    return [lam[real_peaks], flux[real_peaks], npix_real, cwarray, cont_filter, lam[peaks], flux[peaks]] 
+    return [lam[real_peaks], flux[real_peaks], npix_real, snr_real, cwarray, cont_filter, lam[peaks], flux[peaks]] 
 
 
 
@@ -149,8 +163,8 @@ def loop_field_cwt():
     if os.path.exists('linelist') == False: 
         os.mkdir('linelist') 
 
-    os.system('ls Spectra/*G102_BEAM_*A.dat > linelist/g102_spec.list')
-    os.system('ls Spectra/*G141_BEAM_*A.dat > linelist/g141_spec.list')
+    os.system('ls *G102_BEAM_*A.dat > linelist/g102_spec.list')
+    os.system('ls *G141_BEAM_*A.dat > linelist/g141_spec.list')
     
 
     config_pars = read_config('default.config')
@@ -160,8 +174,8 @@ def loop_field_cwt():
     g141list = asciitable.read('linelist/g141_spec.list', format = 'no_header')
     g141files = g141list['col1']
     ### the sizes of the sources are used as a rough estimate 
-    blue_se = asciitable.read('DATA/DIRECT_GRISM/fin_F110.cat') 
-    red_se  = asciitable.read('DATA/DIRECT_GRISM/fin_F160.cat') 
+    blue_se = asciitable.read('../DATA/DIRECT_GRISM/fin_F110.cat') 
+    red_se  = asciitable.read('../DATA/DIRECT_GRISM/fin_F160.cat') 
 
     a_image_blue = blue_se['col5'] 
     a_image_red = red_se['col5']
@@ -172,7 +186,7 @@ def loop_field_cwt():
     for filename in g102files:
         #filename = 'Spectra/Par302_G102_BEAM_1A.dat'
         ### get spectral data        
-        spdata = asciitable.read(filename, names = ['lambda', 'flux', 'ferror', 'contam', 'zeroth']) 
+        spdata = asciitable.read(filename, names = ['lambda', 'flux', 'ferror', 'contam', 'zero']) 
         trimmed_spec = trim_spec(spdata, None, config_pars) 
         
         ### look up the object in the se catalog and grab the a_image.
@@ -195,10 +209,10 @@ def loop_field_cwt():
         lam_cwt = g102_cwt[0] 
         flam_cwt = g102_cwt[1] 
         npix_cwt = g102_cwt[2] 
-        #snr_cwt = g102_cwt[3]
+        snr_cwt = g102_cwt[3]
         for i in np.arange(len(lam_cwt)):
-            print beam, 'G102', lam_cwt[i], npix_cwt[i], fwhm_est_pix
-            outfile.write(str(beam) + ' G102   ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i])  + '\n') 
+            print beam, 'G102', lam_cwt[i], npix_cwt[i], fwhm_est_pix, snr_cwt[i]
+            outfile.write(str(beam) + ' G102   ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i])   +  '   ' + str(snr_cwt[i]) + '\n') 
         if config_pars['n_sigma_for_2pix_lines'] != False: 
 
             config_pars['npix_thresh'] = 2 
@@ -208,9 +222,10 @@ def loop_field_cwt():
             lam_cwt = g102_cwt[0] 
             flam_cwt = g102_cwt[1] 
             npix_cwt = g102_cwt[2] 
+            snr_cwt = g102_cwt[3]
             for i in np.arange(len(lam_cwt)):
-                print beam, 'G102', lam_cwt[i], npix_cwt[i] , fwhm_est_pix 
-                outfile.write(str(beam) + ' G102   ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i])  + '\n') 
+                print beam, 'G102', lam_cwt[i], npix_cwt[i] , fwhm_est_pix, snr_cwt[i]
+                outfile.write(str(beam) + ' G102   ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i])  +  '   ' + str(snr_cwt[i]) + '\n') 
         
         ### go back to the beginning with the old config pars 
         config_pars = read_config('default.config')
@@ -222,7 +237,7 @@ def loop_field_cwt():
     config_pars['transition_wave'] = 11200.
     for filename in g141files:
         #filename = 'Spectra/Par302_G141_BEAM_1A.dat'
-        spdata = asciitable.read(filename, names = ['lambda', 'flux', 'ferror', 'contam', 'zeroth']) 
+        spdata = asciitable.read(filename, names = ['lambda', 'flux', 'ferror', 'contam', 'zero']) 
         trimmed_spec = trim_spec(None, spdata, config_pars) 
         beam = float(filename.split('_')[-1].split('A')[0]) 
         w=np.where(beam_se == beam) 
@@ -240,10 +255,10 @@ def loop_field_cwt():
         lam_cwt = g141_cwt[0] 
         flam_cwt = g141_cwt[1] 
         npix_cwt = g141_cwt[2] 
-        #snr_cwt = g141_cwt[3]
+        snr_cwt = g141_cwt[3]
         for i in np.arange(len(lam_cwt)):
-            print beam, 'G141', lam_cwt[i], npix_cwt[i], fwhm_est_pix
-            outfile.write(str(beam) + ' G141  ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i]) + '\n') 
+            print beam, 'G141', lam_cwt[i], npix_cwt[i], fwhm_est_pix, snr_cwt[i]
+            outfile.write(str(beam) + ' G141  ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i]) +   '   ' + str(snr_cwt[i]) +'\n') 
         if config_pars['n_sigma_for_2pix_lines'] != False: 
 
             config_pars['npix_thresh'] = 2 
@@ -253,9 +268,10 @@ def loop_field_cwt():
             lam_cwt = g141_cwt[0] 
             flam_cwt = g141_cwt[1] 
             npix_cwt = g141_cwt[2] 
+            snr_cwt = g141_cwt[3] 
             for i in np.arange(len(lam_cwt)):
-                print beam, 'G141', lam_cwt[i], npix_cwt[i] 
-                outfile.write(str(beam) + ' G141   ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i])  + '\n') 
+                print beam, 'G141', lam_cwt[i], npix_cwt[i], snr_cwt[i]
+                outfile.write(str(beam) + ' G141   ' + str(lam_cwt[i]) +  ' '  +  str(npix_cwt[i])  + '   ' + str(snr_cwt[i]) + '\n') 
         ### go back to the beginning with the old config pars 
         config_pars = read_config('default.config')
         config_pars['transition_wave'] = 11200.
@@ -266,11 +282,13 @@ def loop_field_cwt():
     grism = tab['col2'] 
     wave = tab['col3'] 
     npix = tab['col4']
+    snr = tab['col5']
     s=np.argsort(beam) 
     beam = beam[s] 
     grism = grism[s] 
     wave =wave[s]
     npix = npix[s]
+    snr = snr[s]
     beams_unique = np.unique(beam)  
     outfile = open('linelist/temp2', 'w') 
     for b in beams_unique:
@@ -279,32 +297,37 @@ def loop_field_cwt():
         
         waves_obj = wave[w] 
         npix_obj = npix[w] 
+        snr_obj = snr[w] 
         
         waves_uniq, ind = np.unique(waves_obj, return_index = True) 
         npix_uniq = npix_obj[ind] 
+        snr_uniq = snr_obj[ind]
         s = np.argsort(waves_uniq) 
         waves_final_g102 = waves_uniq[s] 
         npix_final_g102 = npix_uniq[s] 
+        snr_final_g102 = snr_uniq[s]
        
-        for lam, npx in zip(waves_final_g102, npix_final_g102): 
-            outfile.write(str(b) +  '   G102   ' + str(lam) +  '   ' +str(npx)  +  '\n')
+        for lam, npx, sn in zip(waves_final_g102, npix_final_g102, snr_final_g102): 
+            outfile.write(str(b) +  '   G102   ' + str(lam) +  '   ' +str(npx)  + '  ' + str(sn)  +  '\n')
         
 
         ### do the g141 for b
         w = (beam == b) & (grism== 'G141')
         waves_obj = wave[w] 
-        npix_obj = npix[w] 
+        npix_obj = npix[w]
+        snr_obj = snr[w] 
         
         waves_uniq, ind = np.unique(waves_obj, return_index = True) 
         npix_uniq = npix_obj[ind] 
+        snr_uniq = snr_obj[ind] 
         s = np.argsort(waves_uniq) 
         waves_final_g141 = waves_uniq[s] 
         npix_final_g141 = npix_uniq[s] 
-
+        snr_final_g141 = snr_uniq[s] 
 
         #wave_obj_g141 =  np.sort(np.unique(wave[w]))
-        for lam, npx in zip(waves_final_g141, npix_final_g141): 
-            outfile.write(str(b) +  '   G141   ' + str(lam) + '  ' + str(npx) + '  \n')
+        for lam, npx, sn in zip(waves_final_g141, npix_final_g141, snr_final_g141): 
+            outfile.write(str(b) +  '   G141   ' + str(lam) + '  ' + str(npx)  +'  ' +  str(sn) +  '  \n')
     outfile.close()            
 
 
@@ -313,16 +336,16 @@ def loop_field_cwt():
 
 
 def test_obj_cwt(parno, beamno, configfile): 
-    blue_se = asciitable.read('DATA/DIRECT_GRISM/fin_F110.cat') 
-    red_se  = asciitable.read('DATA/DIRECT_GRISM/fin_F160.cat')
+    blue_se = asciitable.read('../DATA/DIRECT_GRISM/fin_F110.cat') 
+    red_se  = asciitable.read('../DATA/DIRECT_GRISM/fin_F160.cat')
     a_image_blue = blue_se['col5'] 
     a_image_red = red_se['col5']
     beam_se = blue_se['col2'] 
     config_pars = read_config(configfile)
-    bluefile = 'Spectra/Par'+str(parno) + '_G102_BEAM_'+str(beamno)+'A.dat'
-    redfile =  'Spectra/Par'+str(parno) + '_G141_BEAM_'+str(beamno)+'A.dat' 
+    bluefile = 'Par'+str(parno) + '_G102_BEAM_'+str(beamno)+'A.dat'
+    redfile =  'Par'+str(parno) + '_G141_BEAM_'+str(beamno)+'A.dat' 
     
-    spdata_blue = asciitable.read(bluefile, names = ['lambda', 'flux', 'ferror', 'contam', 'zeroth']) 
+    spdata_blue = asciitable.read(bluefile, names = ['lambda', 'flux', 'ferror', 'contam', 'zero']) 
     trimmed_spec_blue= trim_spec(spdata_blue, None, config_pars)  
     
     ### do the blue side 
@@ -344,7 +367,7 @@ def test_obj_cwt(parno, beamno, configfile):
 
     ### do the red side 
     config_pars['transition_wave'] = 11200.
-    spdata_red = asciitable.read(redfile, names = ['lambda', 'flux', 'ferror', 'contam', 'zeroth']) 
+    spdata_red = asciitable.read(redfile, names = ['lambda', 'flux', 'ferror', 'contam', 'zero']) 
     trimmed_spec_red= trim_spec(None, spdata_red, config_pars)
     lam = trimmed_spec_red[0] 
     flux_corr = trimmed_spec_red[1] - trimmed_spec_red[3] 

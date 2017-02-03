@@ -1,9 +1,9 @@
 import copy as cp
-#import scipy.signal as si 
+import scipy.signal as si 
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-#import os
+import os
 import astropy.io.ascii as asciitable
 #import time  
 import mpfit

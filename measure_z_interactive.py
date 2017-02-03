@@ -173,6 +173,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
     ####################################################################################
     lam_Halpha=6563.0
     lam_Hbeta=4861.0
+    lam_Hg = 4341.0 
     lam_Oiii_1=4959.0
     lam_Oiii_2=5007.0
     lam_Oii=3727.0
@@ -181,12 +182,12 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
     lam_Siii_2=9532.0
     #lam_Lya=1216.0
     lam_He=10830.0
-    lam_Fe=12600.0
-    lam_Pag=10940.0
-    lam_Pab=12810.0
+    #lam_Fe=12600.0
+    #lam_Pag=10940.0
+    #lam_Pab=12810.0
     
-    suplines=[lam_Oii,lam_Hbeta,lam_Oiii_1,lam_Oiii_2,lam_Halpha,lam_Sii,lam_Siii_1,lam_Siii_2,lam_He,lam_Pag,lam_Fe,lam_Pab]
-    
+    suplines=[lam_Oii, lam_Hg, lam_Hbeta,lam_Oiii_2,lam_Halpha,lam_Sii,lam_Siii_1,lam_Siii_2,lam_He]
+    suplines_str = ['[OII]', 'Hg', 'Hb', '[OIII]', 'Ha', '[SII]', '[SIII]', '[SIII]', 'HeI']  
     
     #### STEP 6:  Get zero and first order positions; unpack them #############
     #########################################################################
@@ -291,10 +292,13 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
         specname='Par' + str(parnos[0]) + '_BEAM_' + str(objid_unique[i]) + 'A.dat'
         specnameg102='Par' + str(parnos[0]) + '_G102_BEAM_' + str(objid_unique[i]) + 'A.dat'   ### may not exist.
         specnameg141='Par' + str(parnos[0]) + '_G141_BEAM_' + str(objid_unique[i]) + 'A.dat'
-        plotTitle='Par' + str(parnos[0]) + '_BEAM_' + str(objid[i])
+        plotTitle='Par' + str(parnos[0]) + '_BEAM_' + str(objid_unique[i])
         if os.path.exists('figs') == False: 
             os.mkdir('figs') 
-        plotfilename = 'figs/'+plotTitle + '_fit.pdf' 
+        plotfilename = 'figs/'+plotTitle + '_fit.pdf'
+        if os.path.exists('fitdata') == False: 
+            os.mkdir('fitdata') 
+        fitdatafilename = 'fitdata/'  +plotTitle + '_fitspec.dat'
 
          
         ##### also  start with a fresh set of config pars... we may change these during the interactive fitting. 
@@ -356,8 +360,14 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             spec_val = spdata[1]
             spec_unc = spdata[2] 
             spec_con = spdata[3] 
-            spec_zer = spdata[4] 
-            zero_ord = spec_val  * spec_zer
+            spec_zer = spdata[4]
+
+            w=np.where(spec_zer == 3) 
+            spec_zero_bad = spec_zer * 0 -1 
+            spec_zero_bad[w] = 1.
+            w=np.where((spec_zer == 1) | (spec_zer == 2))
+            spec_zero_mild = spec_zer * 0 -1 
+            spec_zero_mild[w] = 1.
 
             ##### do all the fitting
             fit_inputs = [spec_lam, spec_val, spec_unc, config_pars, zguess, fwhm_guess, str(objid_unique[i])]
@@ -373,27 +383,38 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             fitpars_nolines[12] = 0.1
             fitmodel = emissionline_model(fitpars, spec_lam) * fitresults['fit_scale_factor']  
             contmodel = emissionline_model(fitpars_nolines, spec_lam) * fitresults['fit_scale_factor']  
-                
+            
+            snr_meas_array = np.array( [ fitresults['oii_flux']/fitresults['oii_error'], fitresults['hg_flux']/fitresults['hg_error'], fitresults['hb_flux']/fitresults['hb_error'], 
+                fitresults['oiii_flux']/fitresults['oiii_error'], fitresults['hanii_flux']/fitresults['hanii_error'], fitresults['sii_flux']/fitresults['sii_error'], 
+                fitresults['siii_9069_flux']/fitresults['siii_9069_error'], fitresults['siii_9532_flux']/fitresults['siii_9532_error'], fitresults['he1_flux']/fitresults['he1_error']])
+
+
             plt.ion()
             plt.figure(1,figsize=(11,8))
             plt.clf()
-            #plt.subplot(211)
+            plt.subplot(211)
 
             xmin=spec_lam.min()-200.0
             xmax=spec_lam.max()+200.0
             ymin=spec_val.min()
             ymax=1.5*spec_val.max()
 
-            plt.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r',spec_lam,zero_ord,'m', ls='steps')
+            plt.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r', ls='steps')
             
             plt.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
             ### plot observed wavelengths of all the possible lines. 
-            for li in lamobs :
-                plt.axvline(x=li, color ='b')
+            for li,lstring, sn_meas in zip(lamobs, suplines_str, snr_meas_array): 
+                if (li > xmin+100) & (li < xmax - 100) : 
+                    plt.axvline(x=li, color ='b')
+                    stringplot = lstring + '   (' + str(round(sn_meas, 2)) + ')'
+                    plt.text(li, 0.85 * ymax, stringplot, rotation='vertical', ha='right', fontsize='16')
             plt.axvline(x=lamline, color = 'r', lw=2)
 
             plt.plot(spec_lam, fitmodel, color ='r', lw=1.5)
             plt.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
+            plt.fill_between(spec_lam, spec_zero_bad, -1, color = 'red', alpha=0.3) 
+            plt.fill_between(spec_lam, spec_zero_mild, -1, color = 'grey', alpha=0.3) 
+
 
 
             ### find values of spec_lam nearest to the nodes 
@@ -427,22 +448,36 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             plt.title(plotTitle)
  
             #### second panel for s/n
-            #plt.subplot(212)
-            #s2n=(spec_val-contmodel)/spec_unc
-            #s2n_lam=spec_lam
-            #mask=np.logical_and(s2n>-10000., s2n<10000.)
-            #s2n=s2n[mask]
-            #s2n_lam=s2n_lam[mask]
-            #plt.plot(s2n_lam,s2n,'k-',linestyle='steps')
-            #plt.axhline(y=1.73,c='r')
-            #plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
-            #plt.ylabel(r'S/N',size='xx-large')
-            #plt.xlim([xmin, xmax])
+            plt.subplot(212)
+            s2n=(spec_val-contmodel)/spec_unc
+            s2n_lam=spec_lam
+            mask=np.logical_and(s2n>-10000., s2n<10000.)
+            s2n=s2n[mask]
+            s2n_lam=s2n_lam[mask]
+            plt.plot(s2n_lam,s2n,'k-',linestyle='steps')
+            plt.axhline(y=config_pars['n_sigma_above_cont'], c='r')
+            for li in lamobs :
+                plt.axvline(x=li, color ='b')
+            plt.axvline(x=lamline, color = 'r', lw=2)
+            plt.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
+            plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
+            plt.ylabel(r'S/N',size='xx-large')
+            plt.xlim([xmin, xmax])
             fig = plt.gcf() 
             fig.savefig(plotfilename)   ### saves the figure for everything; junk objects and all;  will repeat/overwrite while iterating on the interactive fit. 
             plt.draw()
-            #plt.draw()   ### why is this here twice??? 
+            plt.draw()   ### why is this here twice??? 
             
+
+            ### dump the continuum fits for use later 
+            fitspec_file = open(fitdatafilename, 'w') 
+            fitspec_file.write('Lam       Flam       Flam_err      Contam       Zero      Fitmodel     Contmodel \n')
+            for j in np.arange( len(spec_lam)) : 
+                specfile_line = '{:<8.1f}'.format(spec_lam[j]) + '{:<15.5e}'.format(spec_val[j]) + '{:<13.5e}'.format(spec_unc[j]) + '{:<13.5e}'.format(spec_con[j]) + \
+                '{:<8.0f}'.format(spec_zer[j]) +  '{:<13.5e}'.format(fitmodel[j]) + '{:<13.5e}'.format(contmodel[j])  + '\n' 
+                fitspec_file.write(specfile_line)
+            fitspec_file.close() 
+
 
             ##### options: 
             print "Enter option (read carefully, options have changed): \n \
