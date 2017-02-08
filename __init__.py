@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import os
 import astropy.io.ascii as asciitable
+import astropy.io.fits as fits 
 #import time  
 import mpfit
 #import multiprocessing as mp

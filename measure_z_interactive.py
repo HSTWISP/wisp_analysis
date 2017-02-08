@@ -107,7 +107,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
 
     #### STEP 2:   read the list of candidate lines  ####################
     ###########################################################################
-    llin = asciitable.read(linelistfile, names = ['parnos', 'grism', 'objid', 'wavelen', 'npix', 'ston', 'flag']) 
+    llin = asciitable.read(linelistfile, names = ['parnos', 'grism', 'objid', 'wavelen', 'npix', 'ston']) 
     parnos = llin['parnos']
     grism = llin['grism']
     objid = llin['objid'] 
@@ -408,7 +408,8 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
                     plt.axvline(x=li, color ='b')
                     stringplot = lstring + '   (' + str(round(sn_meas, 2)) + ')'
                     plt.text(li, 0.85 * ymax, stringplot, rotation='vertical', ha='right', fontsize='16')
-            plt.axvline(x=lamline, color = 'r', lw=2)
+            
+            #plt.axvline(x=lamline, color = 'r', lw=2)
 
             plt.plot(spec_lam, fitmodel, color ='r', lw=1.5)
             plt.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
@@ -458,7 +459,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             plt.axhline(y=config_pars['n_sigma_above_cont'], c='r')
             for li in lamobs :
                 plt.axvline(x=li, color ='b')
-            plt.axvline(x=lamline, color = 'r', lw=2)
+            #plt.axvline(x=lamline, color = 'r', lw=2)
             plt.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
             plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
             plt.ylabel(r'S/N',size='xx-large')
