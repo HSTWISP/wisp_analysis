@@ -2,6 +2,7 @@ import copy as cp
 import scipy.signal as si 
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 import os
 import astropy.io.ascii as asciitable
@@ -28,6 +29,7 @@ from fitting import fit_obj
 from fitting import fitandplot
 from guis import * 
 from measure_z_interactive import * 
+import pickle
 
-
+from stacking import * 
 

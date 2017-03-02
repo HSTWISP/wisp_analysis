@@ -86,7 +86,7 @@ def getfirstorders (firstorderpath):
     return (fox,foy,folen,fowid,foid)
 
 
-def measure_z_interactive (linelistfile=" ", show_dispersed=True):
+def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit = False):
     #### STEP 1:   get linelist ###############################################
     ###########################################################################
     if linelistfile==" ":
@@ -298,7 +298,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
         plotfilename = 'figs/'+plotTitle + '_fit.pdf'
         if os.path.exists('fitdata') == False: 
             os.mkdir('fitdata') 
-        fitdatafilename = 'fitdata/'  +plotTitle + '_fitspec.dat'
+        fitdatafilename = 'fitdata/'  +plotTitle + '_fitspec'
 
          
         ##### also  start with a fresh set of config pars... we may change these during the interactive fitting. 
@@ -308,11 +308,16 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
         ### choose the lamline that has the highest s/n estimate 
         w=np.where(objid == objid_unique[i]) 
         w=w[0]
+
         lamlines_found = wavelen[w] 
         ston_found = ston[w] 
-        w=np.where(ston_found == np.max(ston_found)) 
-        w=w[0][0]
-        lamline = lamlines_found[w] 
+
+        s = np.argsort(ston_found) 
+        ston_found = ston_found[s[::-1]]  ### reverse s/n order. 
+        lamlines_found = lamlines_found[s[::-1]]  
+        
+        index_of_strongest_line  = 0 
+        lamline = lamlines_found[index_of_strongest_line] 
         zguess = lamline /6564. - 1
 
         w=np.where(beam_list == objid_unique[i])
@@ -331,6 +336,19 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
         herr_obj = herr_list[w] 
 
 
+
+        ### it may be desirable to overwrite the inital guesses, if we are trying to update the object. 
+        if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True): 
+            inpickle = './fitdata/' +fitdatafilename + '.pickle' 
+            fileObject = open(inpickle,'r') 
+            alldata = pickle.load(fileObject)
+            fitresults_old = alldata[8] 
+            config_pars = alldata[10]
+            zguess = fitresults_old['redshift'] 
+            fwhm_guess = fitresults_old['fwhm_g141'] 
+                
+
+
         #### show zero orders.   
         if len(g102zerox)>0:
             show2dNEW('G102',parnos[i],int(objid_unique[i]),g102firstx,g102firsty,g102firstlen,g102firstwid,g102firstid,g102zerox,g102zeroy,g102zeroid,'linear')
@@ -341,9 +359,13 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             if show_dispersed:  # MB
                showDispersed(objid_unique[i],i)    
 
-        ### flag to determine whether we've measured the z or not. 
+       
+
+
+         ### flag to determine whether we've measured the z or not. 
         next=0
-        comment = ' '  ### in case comment isn't filled in, we can still write it.    
+        comment = ' '  ### in case comment isn't filled in, we can still write it.
+
         while (next==0):
 
             ### do this every time because it is fast, and sometimes we re-read with mask or different transition wave.
@@ -365,11 +387,12 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             w=np.where(spec_zer == 3) 
             spec_zero_bad = spec_zer * 0 -1 
             spec_zero_bad[w] = 1.
-            w=np.where((spec_zer == 1) | (spec_zer == 2))
+            w=np.where( spec_zer == 2)  
             spec_zero_mild = spec_zer * 0 -1 
             spec_zero_mild[w] = 1.
 
-            ##### do all the fitting
+
+
             fit_inputs = [spec_lam, spec_val, spec_unc, config_pars, zguess, fwhm_guess, str(objid_unique[i])]
             fitresults = fit_obj(fit_inputs)  ### parsing the inputs this way facilitates parallel processing when fitting is done in batch mode.
             zfit = fitresults['redshift']
@@ -470,14 +493,6 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
             plt.draw()   ### why is this here twice??? 
             
 
-            ### dump the continuum fits for use later 
-            fitspec_file = open(fitdatafilename, 'w') 
-            fitspec_file.write('Lam       Flam       Flam_err      Contam       Zero      Fitmodel     Contmodel \n')
-            for j in np.arange( len(spec_lam)) : 
-                specfile_line = '{:<8.1f}'.format(spec_lam[j]) + '{:<15.5e}'.format(spec_val[j]) + '{:<13.5e}'.format(spec_unc[j]) + '{:<13.5e}'.format(spec_con[j]) + \
-                '{:<8.0f}'.format(spec_zer[j]) +  '{:<13.5e}'.format(fitmodel[j]) + '{:<13.5e}'.format(contmodel[j])  + '\n' 
-                fitspec_file.write(specfile_line)
-            fitspec_file.close() 
 
 
             ##### options: 
@@ -487,7 +502,8 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
              \t ac=accept object fit, noting contamination\n  \
              \t r=reject object \n \
              \t z = enter a different z guess  \n \
-             \t ha,  or hb, o31, o32, o2, s2, s31, s32 =  change redshift guess \n \
+             \t ha,  or hb, o3, o2, s2, s31, s32 =  change redshift guess \n \
+             \t n = skip to next brightest line found in this object \n \
              \t fw = change the fwhm guess in pixels \n \
              \t c=add comment \n \
              \t t=change transition wavelength \n \
@@ -573,6 +589,16 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
                 print "Chage the red cutoff of G141:" 
                 config_pars['lambda_max'] = float(raw_input(">")) 
 
+            elif option =='n':  
+                nlines_found_cwt = np.size(lamlines_found)  
+                index_of_strongest_line = index_of_strongest_line +1 
+               
+                if index_of_strongest_line < (nlines_found_cwt): 
+                    lamline = lamlines_found[index_of_strongest_line] 
+                    zguess = lamline /6564. - 1
+
+                else:
+                     print 'There are no other automatically identified peaks. Select another option.'
 
                 
             #### other lines      
@@ -582,10 +608,10 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
                 zguess=(lamline/lam_Hbeta)-1
             elif option=='o2':
                 zguess=(lamline/lam_Oii)-1
-            elif option=='o31':
+            elif option=='o3':
                 zguess=(lamline/lam_Oiii_1)-1
-            elif option=='o32':
-                zguess=(lamline/lam_Oiii_2)-1
+            #elif option=='o32':
+               # zguess=(lamline/lam_Oiii_2)-1
             elif option=='s2':
                 zguess=(lamline/lam_Sii)-1
             elif option=='s31':
@@ -641,7 +667,28 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True):
         
         
         if zset == 1:
+            # I don't even remember what flagcont is. it is a remnant of the old code. 
             WriteToCatalog(linelistoutfile, parnos[0], objid_unique[i],ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont)
+            
+            #### EASY WAY
+            fitspec_file = open(fitdatafilename + '.dat', 'w') 
+            fitspec_file.write('Lam       Flam       Flam_err      Contam       Zero      Fitmodel     Contmodel \n')
+            
+            for j in np.arange( len(spec_lam)) : 
+                specfile_line = '{:<8.1f}'.format(spec_lam[j]) + '{:<15.5e}'.format(spec_val[j]) + '{:<13.5e}'.format(spec_unc[j]) + '{:<13.5e}'.format(spec_con[j]) + \
+                '{:<8.0f}'.format(spec_zer[j]) +  '{:<13.5e}'.format(fitmodel[j]) + '{:<13.5e}'.format(contmodel[j])  + '\n' 
+                fitspec_file.write(specfile_line)
+            fitspec_file.close() 
+
+
+            fitspec_pickle = open(fitdatafilename + '.pickle', 'wb') 
+            output_meta_data = [parnos[0], objid_unique[i], ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont, config_pars]
+            pickle.dump(output_meta_data, fitspec_pickle) 
+            fitspec_pickle.close() 
+
+
+
+
         ### write comments always 
         WriteComments(commentsfile, parnos[0], objid_unique[i], comment)    ### if we go back to the previous objects, duplicate comments will still be written 
        
@@ -769,6 +816,40 @@ def WriteComments(filename, parnos, objid, comment):
     cat.close() 
 
 
+
+
+
+def UpdateCatalog(linelistoutfile):
+
+    allDirectoryFiles=os.listdir('./fitdata/') 
+    objid_list = [] 
+    for obj in allDirectoryFiles: 
+        x = obj.split('_')[2]
+        objid_list.append(int(x)) 
+        Parno = obj.split('_')[0]   # this is inefficient, but I don't care.
+    objid_list = np.sort(np.unique(np.array(objid_list)))
+    for obj in objid_list:
+        print obj
+        inpickle = './fitdata/' + Parno + '_BEAM_'  + str(obj) +'_fitspec.pickle' 
+        fileObject = open(inpickle,'r') 
+        alldata = pickle.load(fileObject)  
+        ## definition from above 
+       #                      0          1                 2      3        4           5            6         7         8           9         10
+       # output_meta_data = [parnos[0], objid_unique[i], ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont, config_pars]
+        parnos   = alldata[0] 
+        objid_unique = alldata[1] 
+        ra_obj = alldata[2] 
+        dec_obj = alldata[3]  
+        a_image_obj = alldata[4]
+        b_image_obj = alldata[5] 
+        jmag_obj = alldata[6] 
+        hmag_obj = alldata[7] 
+        fitresults = alldata[8] 
+        flagcont = alldata[9] 
+        # config_pars = alldata[10] ## not used here. 
+
+        WriteToCatalog(linelistoutfile, parnos, objid_unique,ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont)
+ 
 
 
 
