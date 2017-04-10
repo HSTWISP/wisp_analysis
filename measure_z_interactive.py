@@ -253,7 +253,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     
     #### ALSO GET ra/dec, b_image, jmag, jerr, hmag, herr because these will be carried forward into the output linelist.
 
-    secat ="../DATA/DIRECT_GRISM/fin_f110.cat"
+    secat ="../DATA/DIRECT_GRISM/fin_F110.cat"
     setab = asciitable.read(secat) 
     beam_list = setab['col2']
     a_image_list = setab['col5'] 
@@ -262,7 +262,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     dec_list =setab['col9'] 
     jmag_list = setab['col13']
     jerr_list = setab['col14'] 
-    secat2 = "../data/DIRECT_GRISM/fin_f160.cat" 
+    secat2 = "../DATA/DIRECT_GRISM/fin_F160.cat" 
     setab2 = asciitable.read(secat2) 
     hmag_list = setab2['col13'] 
     herr_list = setab2['col14'] 

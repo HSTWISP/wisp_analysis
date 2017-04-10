@@ -77,8 +77,8 @@ def find_cwt(lam, flux, err, zeros, fwhm_est_pix, beam_name, config_pars, plotfl
     ### reject peaks that are actually zero orders 
     if np.size(peaks)  > 0: 
         zero_check = [] 
-        mef102 = mef = '../G102_DRIZZLE/axeWFC3_G102_mef_ID'+beam_name + '.fits'
-        mef141 = mef = '../G141_DRIZZLE/axeWFC3_G141_mef_ID'+beam_name + '.fits' 
+        mef102 = mef = '../G102_DRIZZLE/aXeWFC3_G102_mef_ID'+beam_name + '.fits'
+        mef141 = mef = '../G141_DRIZZLE/aXeWFC3_G141_mef_ID'+beam_name + '.fits' 
         hdu102 = fits.open(mef102)
         hdu141 = fits.open(mef141)
 
