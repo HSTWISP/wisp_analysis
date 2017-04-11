@@ -467,12 +467,6 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             current_lam = lamlines_found[index_of_strongest_line]
             current_cont = contmodel[np.argmin(np.abs(spec_lam-current_lam))]
             plt.plot(current_lam, current_cont, 'ro', ms=10)
-            print lamlines_found
-            print
-            print contmodel[np.argmin(np.abs(spec_lam-current_lam))]
-            print
-            print index_of_strongest_line
-
 
             plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
             plt.ylabel(r'F$_\lambda$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$', size='xx-large')
