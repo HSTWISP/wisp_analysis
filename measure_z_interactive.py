@@ -463,6 +463,15 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 lf_cont.append(contmodel[w]) 
             plt.plot(lf_lam, lf_cont, 'bo', ms=9) 
 
+            #### indicate "current" line
+            current_lam = lamlines_found[index_of_strongest_line]
+            current_cont = contmodel[np.argmin(np.abs(spec_lam-current_lam))]
+            plt.plot(current_lam, current_cont, 'ro', ms=10)
+            print lamlines_found
+            print
+            print contmodel[np.argmin(np.abs(spec_lam-current_lam))]
+            print
+            print index_of_strongest_line
 
 
             plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
@@ -502,7 +511,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
              \t ac=accept object fit, noting contamination\n  \
              \t r=reject object \n \
              \t z = enter a different z guess  \n \
-             \t ha,  or hb, o3, o2, s2, s31, s32 =  change redshift guess \n \
+             \t ha,  or hb, o31, o32, o2, s2, s31, s32 =  change redshift guess \n \
              \t n = skip to next brightest line found in this object \n \
              \t fw = change the fwhm guess in pixels \n \
              \t c=add comment \n \
@@ -608,10 +617,10 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 zguess=(lamline/lam_Hbeta)-1
             elif option=='o2':
                 zguess=(lamline/lam_Oii)-1
-            elif option=='o3':
+            elif option=='o31':
                 zguess=(lamline/lam_Oiii_1)-1
-            #elif option=='o32':
-               # zguess=(lamline/lam_Oiii_2)-1
+            elif option=='o32':
+                zguess=(lamline/lam_Oiii_2)-1
             elif option=='s2':
                 zguess=(lamline/lam_Sii)-1
             elif option=='s31':

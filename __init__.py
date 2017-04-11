@@ -31,5 +31,8 @@ from guis import *
 from measure_z_interactive import * 
 import pickle
 
-from stacking import * 
+try:
+    from stacking import * 
+except ImportError:
+    print 'No stacking module. Skipping'
 
