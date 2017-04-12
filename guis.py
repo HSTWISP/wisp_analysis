@@ -138,6 +138,7 @@ def showDirectNEW(obid,lineno=-1):
     path160=path2direct+'F160W_drz.fits'
     path140cat=path2direct+'fin_F140.cat'
     path160cat=path2direct+'fin_F160.cat'
+
     if os.path.exists(path110)==0 and os.path.exists(path140)==0 and os.path.exists(path160)==0:
         print "No Direct Images Found."
         return 0
@@ -159,6 +160,7 @@ def showDirectNEW(obid,lineno=-1):
         panDirect(hexcoo[0],hexcoo[1],grism='G102')
     if lineno!=0:
         panDirect(hexcoo[0],hexcoo[1])
+        # only load the first time 
         return 0
     if os.path.exists(path110)==1:
         cmd='xpaset -p ds9 frame 3'
@@ -344,21 +346,22 @@ def reloadReg():
     par_root_dir='/'
     for pdir in dirpts:
         par_root_dir= par_root_dir +pdir + '/'
-
-    if os.path.exists(par_root_dir+'DATA/DIRECT_GRISM/F110.reg')==1:
+    
+    # reload direct image region files
+    if os.path.exists(par_root_dir+'DATA/DIRECT_GRISM/F110_drz.reg')==1:
         cmd='xpaset -p ds9 frame 3'
         os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F110.reg'
+        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F110_drz.reg'
         os.system(cmd)
-    if os.path.exists(par_root_dir+'DATA/DIRECT_GRISM/F160.reg')==1:
+    if os.path.exists(par_root_dir+'DATA/DIRECT_GRISM/F160_drz.reg')==1:
         cmd='xpaset -p ds9 frame 4'
         os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F160.reg'
+        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F160_drz.reg'
         os.system(cmd)
-    elif os.path.exists(par_root_dir+'DATA/DIRECT_GRISM/F140.reg')==1:
+    elif os.path.exists(par_root_dir+'DATA/DIRECT_GRISM/F140_drz.reg')==1:
         cmd='xpaset -p ds9 frame 4'
         os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F140.reg'
+        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F140_drz.reg'
         os.system(cmd)
 
 

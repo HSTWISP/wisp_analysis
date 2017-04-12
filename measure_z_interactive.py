@@ -87,6 +87,15 @@ def getfirstorders (firstorderpath):
 
 
 def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit = False):
+    #### STEP 0:   set ds9 window to tile mode ################################
+    ###########################################################################
+    ### not the best way to do this, but matching the method in guis.py
+    cmd='xpaset -p ds9 tile'
+    os.system(cmd)
+    cmd='xpaset -p ds9 tile grid layout 2 3'
+    os.system(cmd)
+
+
     #### STEP 1:   get linelist ###############################################
     ###########################################################################
     if linelistfile==" ":
@@ -145,11 +154,20 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
            #### note that objid_done only includes good objects. therefore 
            #w will return the last n objects that you decided were crap.  Sorry about that.
            nstart = w[0][0]
-           print nstart
            if np.size(nstart) == 0:
                print "You've finished this field." 
                return 0 
-               
+           else:   
+               ############################################################
+               #### what the heck does this do?   
+               #### this reloads the direct and grisms images if you are 
+               #### restarting a partially completed field. 
+               #### otherwise showDirectNEW only loads the images the first
+               #### time; it adds time to reload the images for every object
+               showDirectNEW(1,0)
+               if show_dispersed:  # MB
+                   showDispersed(1,0)
+   
 
 
    
@@ -268,13 +286,6 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     herr_list = setab2['col14'] 
 
 
-    ############################################################
-    #### what the heck does this do?   
-   # if recover_temp:
-   #     showDirectNEW(1,0)
-   #     if show_dispersed:  # MB
-   #         showDispersed(1,0)
-   
 
     #### define some things... 
     #progress=0.0
@@ -352,9 +363,10 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
         #### show zero orders.   
         if len(g102zerox)>0:
             show2dNEW('G102',parnos[i],int(objid_unique[i]),g102firstx,g102firsty,g102firstlen,g102firstwid,g102firstid,g102zerox,g102zeroy,g102zeroid,'linear')
-                
+
         if len(g141zerox)>0:
             show2dNEW('G141',parnos[i],int(objid_unique[i]),g141firstx,g141firsty,g141firstlen,g141firstwid,g141firstid,g141zerox,g141zeroy,g141zeroid,'linear')
+            print objid_unique[i], i
             showDirectNEW(objid_unique[i],i)
             if show_dispersed:  # MB
                showDispersed(objid_unique[i],i)    
@@ -505,6 +517,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
              \t ac=accept object fit, noting contamination\n  \
              \t r=reject object \n \
              \t z = enter a different z guess  \n \
+             \t w = enter a different emission line wavelength guess  \n \
              \t ha,  or hb, o31, o32, o2, s2, s31, s32 =  change redshift guess \n \
              \t n = skip to next brightest line found in this object \n \
              \t fw = change the fwhm guess in pixels \n \
@@ -543,11 +556,14 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
 
             #### these options keep you iterating in the while loop    
             elif option=='z':
-                print "Enter Redshift Guess:" 
+                print "The current redshift guess is: %f\nEnter Redshift Guess:" % zguess 
                 zguess = float(raw_input(">")) 
+            elif option=='w':
+                print "The current emission line wavelength is: %f\nEnter Wavelength Guess in Angstroms:" % lamline
+                zguess = float(raw_input(">")) / 6564. - 1
             elif option =='fw': 
                 print "Enter a Guess for FWHM in pixels"
-                print "The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] /config_pars['dispersion_red']) + " and 2* A_image is: " + str(2 * a_image_obj) 
+                print "The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] /config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image_obj) 
                 fwhm_guess = config_pars['dispersion_red']  * float(raw_input(">"))
 	    elif option=='c': # Changed by NR version 0.2.5
                 print "Enter your comment here:"
@@ -568,11 +584,12 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
                 config_pars['mask_region3'] = maskwave
             elif option == 't': 
-                print "Enter the wavelength for the G102 to G141 transition:" 
+                print "The current transition wavelength is: " + str(config_pars['transition_wave']) + "\nEnter the wavelength for the G102 to G141 transition:" 
                 config_pars['transition_wave'] = float(raw_input(">"))
             elif option == 'nodes': 
+                strnw = ','.join(str(nw) for nw in config_pars['node_wave'])
                 print "Enter Wavelengths for Continuum Spline: w1, w2, w3, w4, ...." 
-                print "(current node wavelengths are):" + str(config_pars['node_wave'] )
+                print "(current node wavelengths are: %s)" %strnw #+ str(config_pars['node_wave'] )
                 nodestr = raw_input(">") 
                 nodesplit = nodestr.split(',')
                 node_arr = []
@@ -586,10 +603,10 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 fwhm_guess = 2.35 *  a_image_obj * config_pars['dispersion_red'] ### fwhm is defined for the red side, regardless of where line is.
                 zguess = lamline /6564. - 1 
             elif option == 'bluecut' :
-                print "Change the blue cutoff of G102:"
+                print "The current blue cutoff is: " + str(config_pars['lambda_min']) +"\nChange the blue cutoff of G102:"
                 config_pars['lambda_min'] = float(raw_input(">")) 
             elif option == 'redcut': 
-                print "Chage the red cutoff of G141:" 
+                print "The current red cutoff is: " + str(config_pars['lambda_max']) + "\nChage the red cutoff of G141:" 
                 config_pars['lambda_max'] = float(raw_input(">")) 
 
             elif option =='n':  
@@ -601,7 +618,9 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                     zguess = lamline /6564. - 1
 
                 else:
-                     print 'There are no other automatically identified peaks. Select another option.'
+                    print 'There are no other automatically identified peaks. Select another option.'
+                    ### stay at current line
+                    index_of_strongest_line -= 1
 
                 
             #### other lines      
