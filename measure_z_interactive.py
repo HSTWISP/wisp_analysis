@@ -35,7 +35,9 @@ import pylab as plt
 from scipy.interpolate import spline
 from distutils.sysconfig import *    ### question-- what is this for? 
 import sys
+from matplotlib import gridspec
 from wisp_analysis import *
+
 
 def isFloat(string):
     try:
@@ -426,7 +428,8 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             plt.ion()
             plt.figure(1,figsize=(11,8))
             plt.clf()
-            plt.subplot(211)
+            gs = gridspec.GridSpec(3,4)
+            plt.subplot(gs[0:2,:])
 
             xmin=spec_lam.min()-200.0
             xmax=spec_lam.max()+200.0
@@ -447,10 +450,14 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
 
             plt.plot(spec_lam, fitmodel, color ='r', lw=1.5)
             plt.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
-            plt.fill_between(spec_lam, spec_zero_bad, -1, color = 'red', alpha=0.3) 
-            plt.fill_between(spec_lam, spec_zero_mild, -1, color = 'grey', alpha=0.3) 
+            plt.fill_between(spec_lam, spec_zero_bad, -1, color = 'red', alpha=0.3, label='Major 0th order contam') 
+            plt.fill_between(spec_lam, spec_zero_mild, -1, color = 'orange', alpha=0.3, label='Minor 0th order contam') 
 
-
+            ### plot any masked regions
+            for mr,label in zip(['mask_region1','mask_region2','mask_region3'],['masked regions',None,None]):
+                if (config_pars[mr][0] != 0.) & (config_pars[mr][1] != 0.):
+                    plt.fill_between(config_pars[mr], -1, 1, color = 'grey', alpha=0.3, label=label) 
+            plt.legend()
 
             ### find values of spec_lam nearest to the nodes 
             nodelam = config_pars['node_wave']  
@@ -479,14 +486,14 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             current_cont = contmodel[np.argmin(np.abs(spec_lam-current_lam))]
             plt.plot(current_lam, current_cont, 'ro', ms=10)
 
-            plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
+            #plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
             plt.ylabel(r'F$_\lambda$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$', size='xx-large')
             plt.xlim([xmin, xmax])
             plt.ylim([ymin, ymax])
             plt.title(plotTitle)
  
             #### second panel for s/n
-            plt.subplot(212)
+            plt.subplot(gs[2:,:])
             s2n=(spec_val-contmodel)/spec_unc
             s2n_lam=spec_lam
             mask=np.logical_and(s2n>-10000., s2n<10000.)
@@ -570,21 +577,36 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             elif option == 'm1': 
                 print "Enter wavelength window to mask out:  blue, red:" 
                 maskstr = raw_input(">") 
-                maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
-                config_pars['mask_region1'] = maskwave 
+                try:
+                    maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
+                except ValueError:
+                    print 'Invalid entry. Enter wavelengths separated by commas'
+                else:
+                    config_pars['mask_region1'] = maskwave 
             elif option == 'm2': 
                 print "Enter wavelength window to mask out:  blue, red:" 
                 maskstr = raw_input(">") 
-                maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
-                config_pars['mask_region2'] = maskwave
+                try:
+                    maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
+                except ValueError:
+                    print 'Invalid entry. Enter wavelengths separated by commas'
+                else:
+                    config_pars['mask_region2'] = maskwave
             elif option == 'm3': 
                 print "Enter wavelength window to mask out:  blue, red (Angstroms:" 
                 maskstr = raw_input(">") 
-                maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
-                config_pars['mask_region3'] = maskwave
+                try:
+                    maskwave = [float(maskstr.split(",")[0]), float(maskstr.split(",")[1])]
+                except ValueError:
+                    print 'Invalid entry. Enter wavelengths separated by commas'
+                else:
+                    config_pars['mask_region3'] = maskwave
             elif option == 't': 
                 print "The current transition wavelength is: " + str(config_pars['transition_wave']) + "\nEnter the wavelength for the G102 to G141 transition:" 
-                config_pars['transition_wave'] = float(raw_input(">"))
+                try:
+                    config_pars['transition_wave'] = float(raw_input(">"))
+                except ValueError:
+                    print 'Invalid entry. Enter wavelength of grism transition.'
             elif option == 'nodes': 
                 strnw = ','.join(str(nw) for nw in config_pars['node_wave'])
                 print "Enter Wavelengths for Continuum Spline: w1, w2, w3, w4, ...." 
@@ -592,10 +614,16 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 nodestr = raw_input(">") 
                 nodesplit = nodestr.split(',')
                 node_arr = []
-                for nodelam in nodesplit: 
-                    node_arr.append(float(nodelam)) 
-                node_arr = np.array(node_arr) 
-                config_pars['node_wave'] = node_arr 
+                try:
+                    for nodelam in nodesplit: 
+                        node_arr.append(float(nodelam)) 
+                except ValueError:
+                    print 'Invalid entry. Enter wavelengths separated by commas'
+                else:
+                    node_arr = np.array(node_arr) 
+                    # sort by wavelength
+                    node_arr = np.sort(node_arr)
+                    config_pars['node_wave'] = node_arr 
             elif option == 'reset': 
                 print "Reset configuration parameters, fwhm guess, and zguess to default values" 
                 config_pars = read_config('default.config') 
@@ -603,10 +631,16 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 zguess = lamline /6564. - 1 
             elif option == 'bluecut' :
                 print "The current blue cutoff is: " + str(config_pars['lambda_min']) +"\nChange the blue cutoff of G102:"
-                config_pars['lambda_min'] = float(raw_input(">")) 
+                try:
+                    config_pars['lambda_min'] = float(raw_input(">")) 
+                except ValueError:
+                    print 'Invalid entry. Enter wavelength of blue cutoff.'
             elif option == 'redcut': 
                 print "The current red cutoff is: " + str(config_pars['lambda_max']) + "\nChage the red cutoff of G141:" 
-                config_pars['lambda_max'] = float(raw_input(">")) 
+                try:
+                    config_pars['lambda_max'] = float(raw_input(">")) 
+                except ValueError:
+                    print 'Invalid entry. Enter wavelength of red cutoff.'
 
             elif option =='n':  
                 nlines_found_cwt = np.size(lamlines_found)  
