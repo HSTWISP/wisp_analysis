@@ -457,7 +457,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             for mr,label in zip(['mask_region1','mask_region2','mask_region3'],['masked regions',None,None]):
                 if (config_pars[mr][0] != 0.) & (config_pars[mr][1] != 0.):
                     plt.fill_between(config_pars[mr], -1, 1, color = 'grey', alpha=0.3, label=label) 
-            plt.legend()
+            plt.legend(bbox_to_anchor=[1.05,1.15])
 
             ### find values of spec_lam nearest to the nodes 
             nodelam = config_pars['node_wave']  
