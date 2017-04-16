@@ -366,7 +366,6 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
 
         if len(g141zerox)>0:
             show2dNEW('G141',parnos[i],int(objid_unique[i]),g141firstx,g141firsty,g141firstlen,g141firstwid,g141firstid,g141zerox,g141zeroy,g141zeroid,'linear')
-            print objid_unique[i], i
             showDirectNEW(objid_unique[i],i)
             if show_dispersed:  # MB
                showDispersed(objid_unique[i],i)    
@@ -644,6 +643,8 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             #    zguess=(lamline/lam_Lya)-1
             elif option=='b':
                 print "Going back."
+                ### this is needed so going back doesn't write everything to the file
+                zset=0
                 i=i-2  ### below, it adds 1 to i before moving on.  so subtract 2 to go back one.
                 next=1
             elif option=='q':
