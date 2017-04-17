@@ -155,8 +155,10 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
            w=np.where(objid_unique > objid_done) 
            #### note that objid_done only includes good objects. therefore 
            #w will return the last n objects that you decided were crap.  Sorry about that.
-           nstart = w[0][0]
-           if np.size(nstart) == 0:
+           try:
+               nstart = w[0][0]
+           except IndexError:
+           #if np.size(nstart) == 0:  ## w is an empty list if you have already finished the field
                print "You've finished this field." 
                return 0 
            else:   
@@ -207,7 +209,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     #lam_Pab=12810.0
     
     suplines=[lam_Oii, lam_Hg, lam_Hbeta,lam_Oiii_2,lam_Halpha,lam_Sii,lam_Siii_1,lam_Siii_2,lam_He]
-    suplines_str = ['[OII]', 'Hg', 'Hb', '[OIII]', 'Ha', '[SII]', '[SIII]', '[SIII]', 'HeI']  
+    suplines_str = ['[OII]', r'H$\gamma$', r'H$\beta$', '[OIII]', r'H$\alpha$', '[SII]', '[SIII]', '[SIII]', 'HeI']  
     
     #### STEP 6:  Get zero and first order positions; unpack them #############
     #########################################################################
@@ -297,7 +299,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     ### while loop through line/objects that need fitting####################
     while i<len(objid_unique):
         #### note progress. 
-        progress=float(i)/float(len(parnos))*100.0
+        progress=float(i)/float(len(objid_unique))*100.0
         print "Progress: %.1f percent" % (progress)
         
         ### get spectrum files for this particular object
@@ -750,6 +752,9 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
         WriteComments(commentsfile, parnos[0], objid_unique[i], comment)    ### if we go back to the previous objects, duplicate comments will still be written 
        
         i=i+1
+        if i>=len(objid_unique):
+            raw_input("You have reached the last object.\nThis is the end of the field.\nPress any key to quit...")
+
    # printLLout(linelistoutfile,parnos,grism,objid,wavelen,npix,ston,flag,flagcont,setzs,comment)
     #printLCout(linelistoutfile_cont,parnos,grism,objid,wavelen,npix,ston,flag,flagcont,setzs,comment)
    
