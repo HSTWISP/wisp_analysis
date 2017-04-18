@@ -36,7 +36,10 @@ from scipy.interpolate import spline
 from distutils.sysconfig import *    ### question-- what is this for? 
 import sys
 from matplotlib import gridspec
+import matplotlib.transforms as mtransforms
+
 from wisp_analysis import *
+
 
 
 def isFloat(string):
@@ -86,6 +89,16 @@ def getfirstorders (firstorderpath):
         folen.append(float(linesplit[3][0:-1])) 
         fowid.append(float(linesplit[-1].split('{')[-1].split('}')[0]))  ### python is weird.
     return (fox,foy,folen,fowid,foid)
+
+
+def plot_broken_spec(wavelength, flux, ax, **kwargs):
+    """ """
+    diff = np.diff(wavelength)
+    # define the gap size as a multiple of the dispersion, using G141
+    gapsize = 2*50  # = ~2 pix in G141, ~4 pix in G102
+    split_i = np.where(diff > gapsize)[0] + 1
+    for _w,_f in zip(np.split(wavelength,split_i),np.split(flux,split_i)):
+        ax.plot(_w, _f, **kwargs)
 
 
 def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit = False):
@@ -171,9 +184,6 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                showDirectNEW(1,0)
                if show_dispersed:  # MB
                    showDispersed(1,0)
-   
-
-
    
    
     #### STEP 4: create trace.reg files ############################
@@ -310,7 +320,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
         plotTitle='Par' + str(parnos[0]) + '_BEAM_' + str(objid_unique[i])
         if os.path.exists('figs') == False: 
             os.mkdir('figs') 
-        plotfilename = 'figs/'+plotTitle + '_fit.pdf'
+        plotfilename = 'figs/'+plotTitle + '_fit.png'
         if os.path.exists('fitdata') == False: 
             os.mkdir('fitdata') 
         fitdatafilename = 'fitdata/'  +plotTitle + '_fitspec'
@@ -399,13 +409,26 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             spec_con = spdata[3] 
             spec_zer = spdata[4]
 
+            ### Bit of a hack here with the bad 0th orders
             w=np.where(spec_zer == 3) 
             spec_zero_bad = spec_zer * 0 -1 
             spec_zero_bad[w] = 1.
+            ### need a wavelength array for the 0th orders, since they 
+            ### will later be removed from the arrays for fitting
+            spec_zero_lam = np.copy(spec_lam)
+            ### wait until here to remove the bad zeroth orders (rather than 
+            ### in trim_spec, which is called in other places
+            ### also, this allows us to plot them
+            w=np.where(spec_zer != 3)
+            spec_lam = spec_lam[w]
+            spec_val = spec_val[w]
+            spec_unc = spec_unc[w]
+            spec_con = spec_con[w]
+            spec_zer = spec_zer[w]
+            ### mild zeroth orders
             w=np.where( spec_zer == 2)  
-            spec_zero_mild = spec_zer * 0 -1 
+            spec_zero_mild = spec_zer * 0 -1
             spec_zero_mild[w] = 1.
-
 
 
             fit_inputs = [spec_lam, spec_val, spec_unc, config_pars, zguess, fwhm_guess, str(objid_unique[i])]
@@ -426,57 +449,52 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 fitresults['oiii_flux']/fitresults['oiii_error'], fitresults['hanii_flux']/fitresults['hanii_error'], fitresults['sii_flux']/fitresults['sii_error'], 
                 fitresults['siii_9069_flux']/fitresults['siii_9069_error'], fitresults['siii_9532_flux']/fitresults['siii_9532_error'], fitresults['he1_flux']/fitresults['he1_error']])
 
-            ### define masked arrays for plotting. It can be very confusing 
-            ### to still see a continuum or fit model plotted in a masked 
-            ### region
-            # condition for masked arrays
-            ma_cond = (spec_zero_bad == 1)
-            # add any masked regions to condition
-            for mr in ['mask_region1','mask_region2','mask_region3']:
-                if (config_pars[mr][0] != 0.) & (config_pars[mr][1] != 0.):
-                    ma_cond = ma_cond | (spec_lam >= config_pars[mr][0]) & (spec_lam <= config_pars[mr][1])
-            print spec_lam
-            speclam_ma = np.ma.masked_where(ma_cond, spec_lam)
-            specval_ma = np.ma.masked_where(ma_cond, spec_val)
-            speccon_ma = np.ma.masked_where(ma_cond, spec_con)
-            fitmodel_ma = np.ma.masked_where(ma_cond, fitmodel)
-            contmodel_ma = np.ma.masked_where(ma_cond, contmodel)
-
-
 
             plt.ion()
-            plt.figure(1,figsize=(11,8))
+            #plt.figure(1,figsize=(11,8))
+            fig = plt.figure(1,figsize=(11,8))
             plt.clf()
             gs = gridspec.GridSpec(3,4)
-            plt.subplot(gs[0:2,:])
+            ax1 = fig.add_subplot(gs[0:2,:])
+            ax2 = fig.add_subplot(gs[2:,:])
 
             xmin=spec_lam.min()-200.0
             xmax=spec_lam.max()+200.0
             ymin=spec_val.min()
             ymax=1.5*spec_val.max()
 
-            plt.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r', ls='steps')
-            
-            plt.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
+#            plt.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r', ls='steps')
+            plot_broken_spec(spec_lam, spec_val, color='k', ls='steps', ax=ax1)
+            plot_broken_spec(spec_lam, spec_con, color='r', ls='steps', ax=ax1)
+           
+            ax1.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
             ### plot observed wavelengths of all the possible lines. 
             for li,lstring, sn_meas in zip(lamobs, suplines_str, snr_meas_array): 
                 if (li > xmin+100) & (li < xmax - 100) : 
-                    plt.axvline(x=li, color ='b')
+                    for ax in [ax1,ax2]:
+                        ax.axvline(x=li, color ='b')
                     stringplot = lstring + '   (' + str(round(sn_meas, 2)) + ')'
-                    plt.text(li, 0.85 * ymax, stringplot, rotation='vertical', ha='right', fontsize='16')
+                    ax1.text(li, 0.85 * ymax, stringplot, rotation='vertical', ha='right', fontsize='16')
             
             #plt.axvline(x=lamline, color = 'r', lw=2)
-
-            plt.plot(spec_lam, fitmodel, color ='r', lw=1.5)
-            plt.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
-            plt.fill_between(spec_lam, spec_zero_bad, -1, color = 'red', alpha=0.3, label='Major 0th order contam') 
-            plt.fill_between(spec_lam, spec_zero_mild, -1, color = 'orange', alpha=0.3, label='Minor 0th order contam') 
+            ax1.plot(spec_lam, fitmodel, color ='r', lw=1.5)
+            ax1.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
+#            plot_broken_spec(spec_lam, fitmodel, color='r', lw=1.5)
+#            plot_broken_spec(spec_lam, contmodel, color='b', ls='--', lw=1.5)
+            ### plot 0th orders
+            for ax in [ax1,ax2]:
+                # use data coordinates for x-axis and axes coords for y-axis
+                trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
+                ax.fill_between(spec_zero_lam, 0, 1, where=spec_zero_bad==1, color = 'red', alpha=0.3, transform=trans, label='Major 0th order contam')
+                ax.fill_between(spec_lam, 0, 1, where=spec_zero_mild==1, color = 'orange', alpha=0.3, transform=trans, label='Minor 0th order contam')
 
             ### plot any masked regions
             for mr,label in zip(['mask_region1','mask_region2','mask_region3'],['masked regions',None,None]):
                 if (config_pars[mr][0] != 0.) & (config_pars[mr][1] != 0.):
-                    plt.fill_between(config_pars[mr], -1, 1, color = 'grey', alpha=0.3, label=label) 
-            plt.legend(bbox_to_anchor=[1.05,1.15])
+                    for ax in [ax1,ax2]:
+                        trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
+                        ax.fill_between(config_pars[mr], 0, 1, color = 'grey', alpha=0.3, transform=trans, label=label)
+            ax1.legend(bbox_to_anchor=[1.05,1.15])
 
             ### find values of spec_lam nearest to the nodes 
             nodelam = config_pars['node_wave']  
@@ -487,7 +505,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 w=w[0][0]
                 nl_arr.append(spec_lam[w]) 
                 cont_node.append(contmodel[w]) 
-            plt.plot(nl_arr, cont_node, 'ko', ms=9) 
+            ax1.plot(nl_arr, cont_node, 'ko', ms=9)
 
 
             #### repeat for line_candidates  
@@ -498,39 +516,43 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 w=w[0][0]
                 lf_lam.append(spec_lam[w]) 
                 lf_cont.append(contmodel[w]) 
-            plt.plot(lf_lam, lf_cont, 'bo', ms=9) 
+            ax1.plot(lf_lam, lf_cont, 'bo', ms=9)
 
             #### indicate "current" line
             current_lam = lamlines_found[index_of_strongest_line]
             current_cont = contmodel[np.argmin(np.abs(spec_lam-current_lam))]
-            plt.plot(current_lam, current_cont, 'ro', ms=10)
+            ax1.plot(current_lam, current_cont, 'ro', ms=10)
 
             #plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
-            plt.ylabel(r'F$_\lambda$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$', size='xx-large')
-            plt.xlim([xmin, xmax])
-            plt.ylim([ymin, ymax])
-            plt.title(plotTitle)
+            ax1.set_ylabel(r'F$_\lambda$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$', size='xx-large')
+            ax1.set_xlim([xmin, xmax])
+            ax1.set_ylim([ymin, ymax])
+            ax1.set_title(plotTitle)
  
             #### second panel for s/n
-            plt.subplot(gs[2:,:])
+#            plt.subplot(gs[2:,:])
             s2n=(spec_val-contmodel)/spec_unc
             s2n_lam=spec_lam
             mask=np.logical_and(s2n>-10000., s2n<10000.)
             s2n=s2n[mask]
             s2n_lam=s2n_lam[mask]
-            plt.plot(s2n_lam,s2n,'k-',linestyle='steps')
-            plt.axhline(y=config_pars['n_sigma_above_cont'], c='r')
+#            ax2.plot(s2n_lam,s2n,'k-',linestyle='steps')
+            plot_broken_spec(s2n_lam, s2n, color='k', ls='steps', ax=ax2)
+            ymin=s2n.min()
+            ymax=1.5*s2n.max()
+            ax2.axhline(y=config_pars['n_sigma_above_cont'], c='r')
             for li in lamobs :
-                plt.axvline(x=li, color ='b')
+                ax2.axvline(x=li, color ='b')
             #plt.axvline(x=lamline, color = 'r', lw=2)
-            plt.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
-            plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
-            plt.ylabel(r'S/N',size='xx-large')
-            plt.xlim([xmin, xmax])
-            fig = plt.gcf() 
+            ax2.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
+            ax2.set_xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
+            ax2.set_ylabel(r'S/N',size='xx-large')
+            ax2.set_xlim([xmin, xmax])
+            ax2.set_ylim(ymin, ymax)
+            #fig = plt.gcf() 
             fig.savefig(plotfilename)   ### saves the figure for everything; junk objects and all;  will repeat/overwrite while iterating on the interactive fit. 
             plt.draw()
-            plt.draw()   ### why is this here twice??? 
+#            plt.draw()   ### why is this here twice??? 
             
 
 
