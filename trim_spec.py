@@ -106,6 +106,13 @@ def trim_spec(tbdata_blue, tbdata_red,config_pars):
         contam_spec = np.append(contam_spec_blue, contam_spec_red) 
         zero_spec = np.append(zero_spec_blue, zero_spec_red) 
 
+    ##### remove bad 0th orders 
+    w = (zero_spec != 3)
+    lam_spec = lam_spec[w]
+    flux_spec  = flux_spec[w] 
+    error_spec = error_spec[w]
+    contam_spec = contam_spec[w] 
+    zero_spec = zero_spec[w]
 
     ##### removed masked regions
     w=np.where( (lam_spec < config_pars['mask_region1'][0]) |  (lam_spec > config_pars['mask_region1'][1]))

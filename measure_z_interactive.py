@@ -426,6 +426,23 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
                 fitresults['oiii_flux']/fitresults['oiii_error'], fitresults['hanii_flux']/fitresults['hanii_error'], fitresults['sii_flux']/fitresults['sii_error'], 
                 fitresults['siii_9069_flux']/fitresults['siii_9069_error'], fitresults['siii_9532_flux']/fitresults['siii_9532_error'], fitresults['he1_flux']/fitresults['he1_error']])
 
+            ### define masked arrays for plotting. It can be very confusing 
+            ### to still see a continuum or fit model plotted in a masked 
+            ### region
+            # condition for masked arrays
+            ma_cond = (spec_zero_bad == 1)
+            # add any masked regions to condition
+            for mr in ['mask_region1','mask_region2','mask_region3']:
+                if (config_pars[mr][0] != 0.) & (config_pars[mr][1] != 0.):
+                    ma_cond = ma_cond | (spec_lam >= config_pars[mr][0]) & (spec_lam <= config_pars[mr][1])
+            print spec_lam
+            speclam_ma = np.ma.masked_where(ma_cond, spec_lam)
+            specval_ma = np.ma.masked_where(ma_cond, spec_val)
+            speccon_ma = np.ma.masked_where(ma_cond, spec_con)
+            fitmodel_ma = np.ma.masked_where(ma_cond, fitmodel)
+            contmodel_ma = np.ma.masked_where(ma_cond, contmodel)
+
+
 
             plt.ion()
             plt.figure(1,figsize=(11,8))
