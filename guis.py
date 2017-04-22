@@ -6,8 +6,18 @@ from wisp_analysis import *
 from distutils.sysconfig import *
 
 
-def show2dNEW (grism,parno,obid,firstx,firsty,firstlen,firstwid,firstid,zerox,zeroy,zeroid,trans,zran1=-0.2,zran2=0.75):
+def show2dNEW (grism,parno,obid,zeroarr,trans,zran1=-0.2,zran2=0.75):
 # In version 1.0, will first look for wavelength-calibrated stamps in the G1??_DRIZZLE directories; failing this, will default to old stamps
+    # zero and first order positions
+#    firstx = firstarr['x']
+#    firsty = firstarr['y']
+#    firstlen = firstarr['len']
+#    firstwid = firstarr['width']
+#    firstid = firstarr['objid']
+    zerox = zeroarr['x']
+    zeroy = zeroarr['y']
+    zeroid = zeroarr['objid']
+
     dims=()
     zrad=10.0
     workingdir=os.getcwd()
@@ -121,7 +131,11 @@ def show2dNEW (grism,parno,obid,firstx,firsty,firstlen,firstwid,firstid,zerox,ze
 
 
 
-def showDirectNEW(obid,lineno=-1):
+def showDirectNEW(obid,load_image=False):
+    """
+    Removed lineno, which was only used to check whether the images 
+    should be reloaded.
+    """
     obid=int(obid)
     workingdir=os.getcwd()
     dirpts=workingdir.split('/')[1:-1]
@@ -130,9 +144,6 @@ def showDirectNEW(obid,lineno=-1):
         par_root_dir= par_root_dir +pdir + '/'
 
     path2direct=par_root_dir+'DATA/DIRECT_GRISM/'
-    #path110=path2direct+'F110W_rot_drz.fits'
-    #path140=path2direct+'F140W_rot_drz.fits'
-    #path160=path2direct+'F160W_rot_drz.fits'
     path110=path2direct+'F110W_drz.fits'
     path140=path2direct+'F140W_drz.fits'
     path160=path2direct+'F160W_drz.fits'
@@ -156,43 +167,48 @@ def showDirectNEW(obid,lineno=-1):
                 xcenter,ycenter=float(entries[7]),float(entries[8])
                 hexcoo=[entries[7],entries[8]]
     infHcat.close()
-    if lineno!=0 and os.path.exists(path110)==1:
-        panDirect(hexcoo[0],hexcoo[1],grism='G102')
-    if lineno!=0:
-        panDirect(hexcoo[0],hexcoo[1])
-        # only load the first time 
-        return 0
-    if os.path.exists(path110)==1:
-        cmd='xpaset -p ds9 frame 3'
-        os.system(cmd)
-        cmd='xpaset -p ds9 file '+path110
-        os.system(cmd)
-        ### using F110_drz.reg with F110W_drz.fits
-        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F110_drz.reg'
-        os.system(cmd)
-        cmd='xpaset -p ds9 pan to '+hexcoo[0]+' '+hexcoo[1]+' fk5'
-        os.system(cmd)
-    if os.path.exists(path140)==1:
-        cmd='xpaset -p ds9 frame 4'
-        os.system(cmd)
-        cmd='xpaset -p ds9 file '+path140
-        os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+par_root_dir+ 'DATA/DIRECT_GRISM/F140_drz.reg'
-        os.system(cmd)
-        cmd='xpaset -p ds9 pan to '+hexcoo[0]+' '+hexcoo[1]+' fk5'
-        os.system(cmd)
-    elif os.path.exists(path160)==1:
-        cmd='xpaset -p ds9 frame 4'
-        os.system(cmd)
-        cmd='xpaset -p ds9 file '+path160
-        os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F160_drz.reg'
-        os.system(cmd)
-        cmd='xpaset -p ds9 pan to '+hexcoo[0]+' '+hexcoo[1]+' fk5'
-        os.system(cmd)
-    
 
-def showDispersed(obid,lineno=-1):  # MB
+    # load the direct images
+    if load_image:
+        if os.path.exists(path110)==1:
+            cmd='xpaset -p ds9 frame 3'
+            os.system(cmd)
+            cmd='xpaset -p ds9 file '+path110
+            os.system(cmd)
+            ### using F110_drz.reg with F110W_drz.fits
+            cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F110_drz.reg'
+            os.system(cmd)
+            cmd='xpaset -p ds9 pan to '+hexcoo[0]+' '+hexcoo[1]+' fk5'
+            os.system(cmd)
+        if os.path.exists(path140)==1:
+            cmd='xpaset -p ds9 frame 4'
+            os.system(cmd)
+            cmd='xpaset -p ds9 file '+path140
+            os.system(cmd)
+            cmd='xpaset -p ds9 regions file '+par_root_dir+ 'DATA/DIRECT_GRISM/F140_drz.reg'
+            os.system(cmd)
+            cmd='xpaset -p ds9 pan to '+hexcoo[0]+' '+hexcoo[1]+' fk5'
+            os.system(cmd)
+        elif os.path.exists(path160)==1:
+            cmd='xpaset -p ds9 frame 4'
+            os.system(cmd)
+            cmd='xpaset -p ds9 file '+path160
+            os.system(cmd)
+            cmd='xpaset -p ds9 regions file '+par_root_dir+'DATA/DIRECT_GRISM/F160_drz.reg'
+            os.system(cmd)
+            cmd='xpaset -p ds9 pan to '+hexcoo[0]+' '+hexcoo[1]+' fk5'
+            os.system(cmd)
+    # pan to the coordinates of this object
+    if os.path.exists(path110):
+        panDirect(hexcoo[0],hexcoo[1],grism='G102')
+    panDirect(hexcoo[0],hexcoo[1])
+
+
+def showDispersed(obid,load_image=False):  # MB
+    """
+    Removed lineno, which was only used to check whether the images 
+    should be reloaded.
+    """
     obid=int(obid)
     workingdir=os.getcwd()
     dirpts=workingdir.split('/')[1:-1]
@@ -239,33 +255,35 @@ def showDispersed(obid,lineno=-1):  # MB
     else:
         return 0
     
-    if lineno!=0 and os.path.exists(path102)==1:
+    if load_image:
+        if os.path.exists(path102)==1:
+            cmd='xpaset -p ds9 frame 5'
+            os.system(cmd)
+            cmd='xpaset -p ds9 file '+path102
+            os.system(cmd)
+            cmd='xpaset -p ds9 regions file '+path102_0reg
+            os.system(cmd)
+            cmd='xpaset -p ds9 regions file '+path102_1reg
+            os.system(cmd)
+            cmd='xpaset -p ds9 pan to %f %f image' % (x102,y102)
+            os.system(cmd)
+        if os.path.exists(path141)==1:
+            cmd='xpaset -p ds9 frame 6'
+            os.system(cmd)
+            cmd='xpaset -p ds9 file '+path141
+            os.system(cmd)
+            cmd='xpaset -p ds9 regions file '+path141_0reg
+            os.system(cmd)
+            cmd='xpaset -p ds9 regions file '+path141_1reg
+            os.system(cmd)
+            cmd='xpaset -p ds9 pan to %f %f image' % (x141, y141)
+            os.system(cmd)
+
+    # pan to the coordinates of this object
+    if os.path.exists(path102):
         panDispersed(x102,y102,grism='G102')
-    if lineno!=0:
-        panDispersed(x141,y141)
-        return 0
-    if os.path.exists(path102)==1:
-        cmd='xpaset -p ds9 frame 5'
-        os.system(cmd)
-        cmd='xpaset -p ds9 file '+path102
-        os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+path102_0reg
-        os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+path102_1reg
-        os.system(cmd)
-        cmd='xpaset -p ds9 pan to %f %f image' % (x102,y102)
-        os.system(cmd)
-    if os.path.exists(path141)==1:
-        cmd='xpaset -p ds9 frame 6'
-        os.system(cmd)
-        cmd='xpaset -p ds9 file '+path141
-        os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+path141_0reg
-        os.system(cmd)
-        cmd='xpaset -p ds9 regions file '+path141_1reg
-        os.system(cmd)
-        cmd='xpaset -p ds9 pan to %f %f image' % (x141, y141)
-        os.system(cmd)
+    panDispersed(x141,y141)
+
 
 def createAltGrismRegion(grism):
     workingdir=os.getcwd()
