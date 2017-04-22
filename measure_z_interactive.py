@@ -33,6 +33,7 @@ import distutils
 import scipy
 import pylab as plt
 from scipy.interpolate import spline
+from astropy.table import Table
 from distutils.sysconfig import *    ### question-- what is this for? 
 import sys
 from matplotlib import gridspec
@@ -99,6 +100,24 @@ def plot_broken_spec(wavelength, flux, ax, **kwargs):
     split_i = np.where(diff > gapsize)[0] + 1
     for _w,_f in zip(np.split(wavelength,split_i),np.split(flux,split_i)):
         ax.plot(_w, _f, **kwargs)
+
+
+def write_fitdata(filename, lam, flux, eflux, contam, zero, fit, continuum, masks):
+    """ """
+    fitspec_file = filename+'.dat'
+    t = Table([lam, flux, eflux, contam, zero, fit, continuum, masks],
+              names=('Lam', 'Flam', 'Flam_err', 'Contam', 'Zero', 'Fitmodel', 'Contmodel', 'Masked'))
+    t['Lam'].format = '{:.1f}'
+    t['Flam'].format = '{:.5e}'
+    t['Flam_err'].format = '{:.5e}'
+    t['Contam'].format = '{:.5e}'
+    t['Zero'].format = '{:.0f}'
+    t['Fitmodel'].format = '{:.5e}'
+    t['Contmodel'].format = '{:.5e}'
+    t['Masked'].format = '{:.0f}'
+    asciitable.write(t, fitspec_file, fill_values=[(asciitable.masked,'--')], 
+                     overwrite=True, format='fixed_width_two_line', 
+                     position_char='#', delimiter_pad=' ')
 
 
 def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit = False):
@@ -398,40 +417,31 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             if os.path.exists(specnameg102) == True: 
                tab_blue = asciitable.read(specnameg102, names = ['lambda',  'flux', 'ferror', 'contam', 'zero']) 
                tab_red =  asciitable.read(specnameg141,  names = ['lambda',  'flux', 'ferror', 'contam', 'zero'])
-               spdata = trim_spec(tab_blue, tab_red, config_pars)    ### this is a from the wisp package.
+               spdata = trim_spec(tab_blue, tab_red, config_pars, mask_zeros=True, return_masks=True)    ### this is a from the wisp package.
             else: 
                tab_red =  asciitable.read(specnameg141,  names = ['lambda',  'flux', 'ferror', 'contam', 'zero'])
-               spdata = trim_spec(None, tab_red, config_pars) 
+               spdata = trim_spec(None, tab_red, config_pars, mask_zeros=True, return_masks=True) 
     
             spec_lam = spdata[0]
             spec_val = spdata[1]
             spec_unc = spdata[2] 
             spec_con = spdata[3] 
             spec_zer = spdata[4]
+            mask_flg = spdata[5]
 
-            ### Bit of a hack here with the bad 0th orders
+            ### get the zeroth orders
             w=np.where(spec_zer == 3) 
             spec_zero_bad = spec_zer * 0 -1 
             spec_zero_bad[w] = 1.
-            ### need a wavelength array for the 0th orders, since they 
-            ### will later be removed from the arrays for fitting
-            spec_zero_lam = np.copy(spec_lam)
-            ### wait until here to remove the bad zeroth orders (rather than 
-            ### in trim_spec, which is called in other places
-            ### also, this allows us to plot them
-            w=np.where(spec_zer != 3)
-            spec_lam = spec_lam[w]
-            spec_val = spec_val[w]
-            spec_unc = spec_unc[w]
-            spec_con = spec_con[w]
-            spec_zer = spec_zer[w]
             ### mild zeroth orders
             w=np.where( spec_zer == 2)  
             spec_zero_mild = spec_zer * 0 -1
             spec_zero_mild[w] = 1.
 
-
-            fit_inputs = [spec_lam, spec_val, spec_unc, config_pars, zguess, fwhm_guess, str(objid_unique[i])]
+            # apply the mask to the wavelength array
+            masked_spec_lam = np.ma.masked_where(np.ma.getmask(spec_val), spec_lam)
+            # compress the masked arrays for fitting
+            fit_inputs = [np.ma.compressed(masked_spec_lam), np.ma.compressed(spec_val), np.ma.compressed(spec_unc), config_pars, zguess, fwhm_guess, str(objid_unique[i])]
             fitresults = fit_obj(fit_inputs)  ### parsing the inputs this way facilitates parallel processing when fitting is done in batch mode.
             zfit = fitresults['redshift']
             print "Guess Redshift z =  %f" % (zguess) 
@@ -442,13 +452,20 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             fitpars_nolines[9:19] = 0. 
             fitpars_nolines[11] = 1.4  ### can't kill this one or divide by zero. 
             fitpars_nolines[12] = 0.1
-            fitmodel = emissionline_model(fitpars, spec_lam) * fitresults['fit_scale_factor']  
-            contmodel = emissionline_model(fitpars_nolines, spec_lam) * fitresults['fit_scale_factor']  
-            
+            fitmodel = emissionline_model(fitpars, np.ma.compressed(masked_spec_lam)) * fitresults['fit_scale_factor']  
+            contmodel = emissionline_model(fitpars_nolines, np.ma.compressed(masked_spec_lam)) * fitresults['fit_scale_factor']  
+            # the fitting is done on compressed arrays, so we need to 
+            # create masked versions of the fit and continuum models
+            full_fitmodel = np.zeros(spec_lam.shape, dtype=float)
+            full_contmodel = np.zeros(spec_lam.shape, dtype=float)
+            full_fitmodel[np.ma.nonzero(spec_val)] = fitmodel
+            full_contmodel[np.ma.nonzero(spec_val)] = contmodel
+            full_fitmodel = np.ma.masked_where(np.ma.getmask(spec_val), full_fitmodel)
+            full_contmodel = np.ma.masked_where(np.ma.getmask(spec_val), full_contmodel)
+
             snr_meas_array = np.array( [ fitresults['oii_flux']/fitresults['oii_error'], fitresults['hg_flux']/fitresults['hg_error'], fitresults['hb_flux']/fitresults['hb_error'], 
                 fitresults['oiii_flux']/fitresults['oiii_error'], fitresults['hanii_flux']/fitresults['hanii_error'], fitresults['sii_flux']/fitresults['sii_error'], 
                 fitresults['siii_9069_flux']/fitresults['siii_9069_error'], fitresults['siii_9532_flux']/fitresults['siii_9532_error'], fitresults['he1_flux']/fitresults['he1_error']])
-
 
             plt.ion()
             #plt.figure(1,figsize=(11,8))
@@ -458,34 +475,33 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             ax1 = fig.add_subplot(gs[0:2,:])
             ax2 = fig.add_subplot(gs[2:,:])
 
-            xmin=spec_lam.min()-200.0
-            xmax=spec_lam.max()+200.0
-            ymin=spec_val.min()
-            ymax=1.5*spec_val.max()
+            xmin=np.ma.min(spec_lam)-200.0
+            xmax=np.ma.max(spec_lam)+200.0
+            ymin=np.ma.min(spec_val)
+            ymax=1.5*np.ma.max(spec_val)
 
-#            plt.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r', ls='steps')
-            plot_broken_spec(spec_lam, spec_val, color='k', ls='steps', ax=ax1)
-            plot_broken_spec(spec_lam, spec_con, color='r', ls='steps', ax=ax1)
-           
+            ax1.plot(spec_lam, spec_val, 'k',spec_lam, spec_con,'r', ls='steps')
             ax1.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
+
+            ax1trans = mtransforms.blended_transform_factory(ax1.transData, ax1.transAxes)
+            ax2trans = mtransforms.blended_transform_factory(ax2.transData, ax2.transAxes)
             ### plot observed wavelengths of all the possible lines. 
             for li,lstring, sn_meas in zip(lamobs, suplines_str, snr_meas_array): 
                 if (li > xmin+100) & (li < xmax - 100) : 
                     for ax in [ax1,ax2]:
                         ax.axvline(x=li, color ='b')
                     stringplot = lstring + '   (' + str(round(sn_meas, 2)) + ')'
-                    ax1.text(li, 0.85 * ymax, stringplot, rotation='vertical', ha='right', fontsize='16')
+                    # use data coordinates for x-axis and axes coords for y-axis
+                    ax1.text(li, 0.85, stringplot, rotation='vertical', ha='right', fontsize='16', transform=ax1trans)
             
             #plt.axvline(x=lamline, color = 'r', lw=2)
-            ax1.plot(spec_lam, fitmodel, color ='r', lw=1.5)
-            ax1.plot(spec_lam, contmodel, color = 'b', linestyle = '--', lw=1.5)
-#            plot_broken_spec(spec_lam, fitmodel, color='r', lw=1.5)
-#            plot_broken_spec(spec_lam, contmodel, color='b', ls='--', lw=1.5)
+            ax1.plot(spec_lam, full_fitmodel, color ='r', lw=1.5)
+            ax1.plot(spec_lam, full_contmodel, color = 'b', linestyle = '--', lw=1.5)
             ### plot 0th orders
             for ax in [ax1,ax2]:
                 # use data coordinates for x-axis and axes coords for y-axis
                 trans = mtransforms.blended_transform_factory(ax.transData, ax.transAxes)
-                ax.fill_between(spec_zero_lam, 0, 1, where=spec_zero_bad==1, color = 'red', alpha=0.3, transform=trans, label='Major 0th order contam')
+                ax.fill_between(spec_lam, 0, 1, where=spec_zero_bad==1, color = 'red', alpha=0.3, transform=trans, label='Major 0th order contam')
                 ax.fill_between(spec_lam, 0, 1, where=spec_zero_mild==1, color = 'orange', alpha=0.3, transform=trans, label='Minor 0th order contam')
 
             ### plot any masked regions
@@ -501,49 +517,47 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             nl_arr = [] 
             cont_node = [] 
             for nl in nodelam: 
-                w=np.where(np.abs(spec_lam - nl)  == np.min(np.abs(spec_lam - nl)))
-                w=w[0][0]
+                #w=np.where(np.abs(spec_lam - nl)  == np.min(np.abs(spec_lam - nl)))
+                #w=w[0][0]
+                w = np.argmin(np.abs(spec_lam - nl))
                 nl_arr.append(spec_lam[w]) 
-                cont_node.append(contmodel[w]) 
+                cont_node.append(full_contmodel[w]) 
             ax1.plot(nl_arr, cont_node, 'ko', ms=9)
-
 
             #### repeat for line_candidates  
             lf_lam  = [] 
             lf_cont = [] 
             for lf in lamlines_found:  
-                w=np.where(np.abs(spec_lam - lf)  == np.min(np.abs(spec_lam -lf)))
-                w=w[0][0]
+                #w=np.where(np.abs(spec_lam - lf)  == np.min(np.abs(spec_lam -lf)))
+                #w=w[0][0]
+                w = np.argmin(np.abs(spec_lam - lf))
                 lf_lam.append(spec_lam[w]) 
-                lf_cont.append(contmodel[w]) 
+                lf_cont.append(full_contmodel[w]) 
             ax1.plot(lf_lam, lf_cont, 'bo', ms=9)
 
             #### indicate "current" line
             current_lam = lamlines_found[index_of_strongest_line]
-            current_cont = contmodel[np.argmin(np.abs(spec_lam-current_lam))]
+            current_cont = contmodel[np.argmin(np.abs(np.ma.compressed(masked_spec_lam)-current_lam))]
+            
             ax1.plot(current_lam, current_cont, 'ro', ms=10)
 
-            #plt.xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
             ax1.set_ylabel(r'F$_\lambda$ ergs s$^{-1}$ cm$^{-2}$ $\AA^{-1}$', size='xx-large')
             ax1.set_xlim([xmin, xmax])
             ax1.set_ylim([ymin, ymax])
             ax1.set_title(plotTitle)
  
             #### second panel for s/n
-#            plt.subplot(gs[2:,:])
-            s2n=(spec_val-contmodel)/spec_unc
+            s2n=(spec_val-full_contmodel)/spec_unc
             s2n_lam=spec_lam
             mask=np.logical_and(s2n>-10000., s2n<10000.)
             s2n=s2n[mask]
             s2n_lam=s2n_lam[mask]
-#            ax2.plot(s2n_lam,s2n,'k-',linestyle='steps')
-            plot_broken_spec(s2n_lam, s2n, color='k', ls='steps', ax=ax2)
+            ax2.plot(s2n_lam,s2n,'k-',linestyle='steps')
             ymin=s2n.min()
             ymax=1.5*s2n.max()
             ax2.axhline(y=config_pars['n_sigma_above_cont'], c='r')
             for li in lamobs :
                 ax2.axvline(x=li, color ='b')
-            #plt.axvline(x=lamline, color = 'r', lw=2)
             ax2.axvline(x=config_pars['transition_wave'], c='c',linestyle=':', lw=3)
             ax2.set_xlabel(r'$\lambda$ ($\AA$)', size='xx-large')
             ax2.set_ylabel(r'S/N',size='xx-large')
@@ -768,23 +782,12 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             # I don't even remember what flagcont is. it is a remnant of the old code. 
             WriteToCatalog(linelistoutfile, parnos[0], objid_unique[i],ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont)
             
-            #### EASY WAY
-            fitspec_file = open(fitdatafilename + '.dat', 'w') 
-            fitspec_file.write('Lam       Flam       Flam_err      Contam       Zero      Fitmodel     Contmodel \n')
-            
-            for j in np.arange( len(spec_lam)) : 
-                specfile_line = '{:<8.1f}'.format(spec_lam[j]) + '{:<15.5e}'.format(spec_val[j]) + '{:<13.5e}'.format(spec_unc[j]) + '{:<13.5e}'.format(spec_con[j]) + \
-                '{:<8.0f}'.format(spec_zer[j]) +  '{:<13.5e}'.format(fitmodel[j]) + '{:<13.5e}'.format(contmodel[j])  + '\n' 
-                fitspec_file.write(specfile_line)
-            fitspec_file.close() 
-
+            write_fitdata(fitdatafilename, spec_lam, spec_val, spec_unc, spec_con, spec_zer, full_fitmodel, full_contmodel, mask_flg)
 
             fitspec_pickle = open(fitdatafilename + '.pickle', 'wb') 
             output_meta_data = [parnos[0], objid_unique[i], ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont, config_pars]
             pickle.dump(output_meta_data, fitspec_pickle) 
             fitspec_pickle.close() 
-
-
 
 
         ### write comments always 

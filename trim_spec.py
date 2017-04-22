@@ -1,91 +1,106 @@
 from wisp_analysis import *
-def trim_spec(tbdata_blue, tbdata_red,config_pars):
-    #ext = hdu.index_of(beam_name) 
-    #tbdata = hdu[ext].data  
 
-    if tbdata_blue != None: 
-        lam_spec_blue = tbdata_blue['lambda'] 
-        flux_spec_blue = tbdata_blue['flux'] 
-        error_spec_blue = tbdata_blue['ferror']  
-        contam_spec_blue = tbdata_blue['contam']
-        zero_spec_blue = tbdata_blue['zero']
 
-        ##### trim the spectrum  ##### 
-        ### step 0:  remove first and last 3 pixels  
-        ### this is usually redundant, but when spectra fall off edge of 
-        ### detector, the latter steps may not catch the messes. 
-        lam_spec_blue = lam_spec_blue[3:-3]
-        flux_spec_blue = flux_spec_blue[3:-3] 
-        error_spec_blue = error_spec_blue[3:-3] 
-        contam_spec_blue = contam_spec_blue[3:-3] 
-        zero_spec_blue = zero_spec_blue[3:-3] 
+def initialize_arrays(data, bluecut, redcut):
+    """Define and trim initial arrays from a table of input data.
 
-        ### only fit fintite data
-        w = np.isfinite(flux_spec_blue)  
-        lam_spec_blue = lam_spec_blue[w] 
-        flux_spec_blue = flux_spec_blue[w]  
-        error_spec_blue = error_spec_blue[w]
-        contam_spec_blue = contam_spec_blue[w] 
-        zero_spec_blue = zero_spec_blue[w]
+    Define the wavelength, flux, flux error, contamination and zeroth order 
+    flags for an object's spectrum in one of the grisms. The first and 
+    last 3 pixels of the spectrum are removed to avoid the mess caused when 
+    spectra fall off the edge of the detector. This step is usually 
+    redundant, but the trimming and masking steps may not catch these 
+    problems at the edges.
 
-        w = np.isfinite(error_spec_blue)  
-        lam_spec_blue = lam_spec_blue[w] 
-        flux_spec_blue = flux_spec_blue[w]  
-        error_spec_blue = error_spec_blue[w]
-        contam_spec_blue = contam_spec_blue[w]
-        zero_spec_blue = zero_spec_blue[w]
+        ### mask edges in wavelength where stuff gets crazy (i.e. low throughput)
+    The arrays are then trimmed in wavelength to remove the areas where 
+    stuff gets crazy (i.e. low throughput). The elements corresponding to
+    wavelengths outside of range defined by (bluecut,redcut) are removed.    
 
-        #### clip the edges in wavelength where stuff gets crazy (i.e. low throughput)  
-        w=np.where( (lam_spec_blue > config_pars['lambda_min']) & (lam_spec_blue < config_pars['transition_wave'])) 
-        lam_spec_blue = lam_spec_blue[w] 
-        flux_spec_blue = flux_spec_blue[w] 
-        error_spec_blue =error_spec_blue[w]
-        contam_spec_blue = contam_spec_blue[w] 
-        zero_spec_blue = zero_spec_blue[w] 
+    Args:
+        data (astropy.io.ascii table): table of data from the 1-D dat file
+        bluecut (float): the minimum wavelength 
+        redcut (float): the maximum wavelength
 
-    if tbdata_red != None: 
-         ###  repeat for red
-        lam_spec_red = tbdata_red['lambda'] 
-        flux_spec_red = tbdata_red['flux'] 
-        error_spec_red = tbdata_red['ferror']  
-        contam_spec_red = tbdata_red['contam']
-        zero_spec_red = tbdata_red['zero']
-        #del hdu[ext].data 
+    Returns:
+        (tuple): tuple containing:
+            lam (float): wavelength array
+            flux (float): flux array
+            error (float): flux error array
+            contam (float): contamination array
+            zeros (int): zeroth order flags
+    """
+    lam = data['lambda'][3:-3]
+    flux = data['flux'][3:-3]
+    error = data['ferror'][3:-3]
+    contam = data['contam'][3:-3]
+    zeros = data['zero'][3:-3]
 
-        ##### trim the spectrum  ##### 
-        ### step 0:  remove first and last 3 pixels  
-        ### this is usually redundant, but when spectra fall off edge of 
-       ### detector, the latter steps may not catch the messes. 
-        lam_spec_red = lam_spec_red[3:-3]
-        flux_spec_red= flux_spec_red[3:-3] 
-        error_spec_red = error_spec_red[3:-3] 
-        contam_spec_red = contam_spec_red[3:-3] 
-        zero_spec_red = zero_spec_red[3:-3]
+    cut = (lam > bluecut) & (lam < redcut)
+    lam = lam[cut]
+    flux = flux[cut]
+    error = error[cut]
+    contam = contam[cut]
+    zeros = zeros[cut]
 
-       ### only fit fintite data
-        w = np.isfinite(flux_spec_red)  
-        lam_spec_red = lam_spec_red[w] 
-        flux_spec_red = flux_spec_red[w]  
-        error_spec_red = error_spec_red[w]
-        contam_spec_red= contam_spec_red[w] 
-        zero_spec_red = zero_spec_red[w] 
+    return lam,flux,error,contam,zeros
 
-        w = np.isfinite(error_spec_red)  
-        lam_spec_red = lam_spec_red[w] 
-        flux_spec_red = flux_spec_red[w]  
-        error_spec_red = error_spec_red[w]
-        contam_spec_red = contam_spec_red[w]
-        zero_spec_red = zero_spec_red[w]
 
-        #### clip the edges in wavelength where stuff gets crazy (i.e. low throughput)  
-        w=np.where( (lam_spec_red > config_pars['transition_wave']) & (lam_spec_red < config_pars['lambda_max'])) 
-        lam_spec_red = lam_spec_red[w] 
-        flux_spec_red = flux_spec_red[w] 
-        error_spec_red =error_spec_red[w]
-        contam_spec_red = contam_spec_red[w] 
-        zero_spec_red = zero_spec_red[w]
+def newmask(array, maskedarray):
+    newarray = np.ma.masked_where(np.ma.getmask(maskedarray), array)
+    return newarray
 
-    ##### concatenate.
+
+def trim_spec(tbdata_blue, tbdata_red, config_pars, mask_zeros=False, return_masks=False):
+    """Create one array of spectra, etc. from multiple grism 1d files
+    
+    If masking: 
+        don't need to mask wavelenght or zeroth orders, keep these for 
+        writing out file
+
+    create an array keeping track of the masked regions
+
+    Args:
+        tbdata_blue ():
+        tbdata_red ():
+        config_pars ():
+        return_masks (Optional[bool]):
+
+    Returns:
+    """
+    ### check each grism separately
+    if tbdata_blue is not None:
+        bluecut = config_pars['lambda_min']
+        redcut = config_pars['transition_wave']
+        specdata = initialize_arrays(tbdata_blue, bluecut, redcut)
+        lam_spec_blue = specdata[0] 
+        flux_spec_blue = specdata[1]
+        error_spec_blue = specdata[2]
+        contam_spec_blue = specdata[3]
+        zero_spec_blue = specdata[4]
+
+        ### only fit finite data
+        flux_spec_blue = np.ma.masked_where(np.logical_or(~(np.isfinite(flux_spec_blue)),~(np.isfinite(error_spec_blue))), flux_spec_blue)
+        error_spec_blue = newmask(error_spec_blue, flux_spec_blue)
+        contam_spec_blue = newmask(contam_spec_blue, flux_spec_blue)
+
+    if tbdata_red is not None: 
+        bluecut = config_pars['transition_wave']
+        redcut = config_pars['lambda_max']
+        specdata = initialize_arrays(tbdata_red, bluecut, redcut)
+        lam_spec_red = specdata[0]
+        flux_spec_red = specdata[1]
+        error_spec_red = specdata[2]
+        contam_spec_red = specdata[3]
+        zero_spec_red = specdata[4]
+
+        ### only fit finite data
+        flux_spec_red = np.ma.masked_where(np.logical_or(~(np.isfinite(flux_spec_red)),~(np.isfinite(error_spec_red))), flux_spec_red)
+        error_spec_red = newmask(error_spec_red, flux_spec_red)
+        contam_spec_red = newmask(contam_spec_red, flux_spec_red)
+
+        ### mask edges in wavelength where stuff gets crazy (i.e. low throughput)  
+     
+    ### concatenate.
     if tbdata_blue == None: 
         lam_spec = lam_spec_red 
         flux_spec = flux_spec_red
@@ -101,49 +116,46 @@ def trim_spec(tbdata_blue, tbdata_red,config_pars):
     
     if (tbdata_red != None) & (tbdata_blue != None): 
         lam_spec = np.append(lam_spec_blue, lam_spec_red) 
-        flux_spec = np.append(flux_spec_blue, flux_spec_red) 
-        error_spec = np.append(error_spec_blue, error_spec_red) 
-        contam_spec = np.append(contam_spec_blue, contam_spec_red) 
+        flux_spec = np.ma.append(flux_spec_blue, flux_spec_red) 
+        error_spec = np.ma.append(error_spec_blue, error_spec_red) 
+        contam_spec = np.ma.append(contam_spec_blue, contam_spec_red) 
         zero_spec = np.append(zero_spec_blue, zero_spec_red) 
 
-    ##### remove bad 0th orders 
-#    w = (zero_spec != 3)
-#    lam_spec = lam_spec[w]
-#    flux_spec  = flux_spec[w] 
-#    error_spec = error_spec[w]
-#    contam_spec = contam_spec[w] 
-#    zero_spec = zero_spec[w]
+    if mask_zeros:
+        ### remove bad 0th orders 
+        flux_spec = np.ma.masked_where(zero_spec == 3, flux_spec)
+        error_spec = newmask(error_spec, flux_spec)
+        contam_spec = newmask(contam_spec, flux_spec)
 
-    ##### removed masked regions
-    w=np.where( (lam_spec < config_pars['mask_region1'][0]) |  (lam_spec > config_pars['mask_region1'][1]))
-    lam_spec = lam_spec[w]
-    flux_spec  = flux_spec[w] 
-    error_spec = error_spec[w]
-    contam_spec = contam_spec[w] 
-    zero_spec = zero_spec[w]
-
-
-    w=np.where( (lam_spec < config_pars['mask_region2'][0]) |  (lam_spec > config_pars['mask_region2'][1]))
-    lam_spec = lam_spec[w]
-    flux_spec  = flux_spec[w] 
-    error_spec = error_spec[w]
-    contam_spec = contam_spec[w] 
-    zero_spec = zero_spec[w]
+    ### create an array of flags for masked regions
+    masked_regions = np.zeros(lam_spec.shape, dtype=int)
+    ### removed masked regions
+    for k,v in config_pars.items():
+        if 'mask_region' in k:
+            bluecut = v[0]
+            redcut = v[1]
+            mask = np.logical_and(lam_spec > bluecut, lam_spec < redcut)
+            flux_spec = np.ma.masked_where(mask, flux_spec)
+            error_spec = newmask(error_spec, flux_spec)
+            contam_spec = newmask(contam_spec, flux_spec)
+            masked_regions[mask] = 1
     
-    w=np.where( (lam_spec < config_pars['mask_region3'][0]) |  (lam_spec > config_pars['mask_region3'][1]))
-    lam_spec = lam_spec[w]
-    flux_spec  = flux_spec[w] 
-    error_spec = error_spec[w]
-    contam_spec = contam_spec[w]
-    zero_spec = zero_spec[w] 
-    
-    
-
-    #### this should be unncessary.... 
-    #w=np.where(contam_spec < 0) 
-    #contam_spec[w] = 0
-    
-
-    return [lam_spec, flux_spec, error_spec, contam_spec, zero_spec] 
+    if return_masks:
+        # wavelength and zeroth orders are not masked, 
+        # this is fine for measure_z_interactive
+        return [lam_spec, flux_spec, error_spec, contam_spec, zero_spec, masked_regions] 
+    else:
+        # need to apply mask to wavelength and zeroth orders so all the 
+        # arrays have the same shape
+        # this is necessary for the cwt code
+        lam_spec = newmask(lam_spec, flux_spec)
+        zero_spec = newmask(zero_spec, flux_spec)
+        # compress the arrays 
+        outlam = np.ma.compressed(lam_spec)
+        outflux = np.ma.compressed(flux_spec)
+        outerror = np.ma.compressed(error_spec)
+        outcontam = np.ma.compressed(contam_spec)
+        outzero = np.ma.compressed(zero_spec)
+        return outlam,outflux,outerror,outcontam,outzero
 
 
