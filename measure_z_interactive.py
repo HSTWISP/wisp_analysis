@@ -40,6 +40,8 @@ from matplotlib import gridspec
 import matplotlib.transforms as mtransforms
 # Explicitly import readline to make the text entry process less tortuous on OSX
 import readline
+# SQLLite database support for data persistence
+import WISPLFDatabaseManager as WDBM
 
 from wisp_analysis import *
 
@@ -171,6 +173,8 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     parts=linelistfile.split('.')
     linelistoutfile=parts[0]+'_catalog.'+parts[1]
     commentsfile = parts[0]+'_comments.'+parts[1]
+
+    databaseManager = WDBM.WISPLFDatabaseManager(parts[0])
 
     if os.path.isfile(linelistoutfile):
         print '\n Output file: \n  %s, \nalready exists\n' % linelistoutfile
