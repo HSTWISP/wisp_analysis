@@ -289,7 +289,7 @@ def plot_object(zguess, spdata, config_pars, snr_meas_array, full_fitmodel, full
     plt.draw()
 
 
-def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, show_dispersed=True):
+def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True):
     """An attempt to move all object-specific tasks 
     """
     # set up and filenames
@@ -442,7 +442,7 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         # change the fwhm guess
         elif option =='fw':
             print "Enter a Guess for FWHM in pixels"
-            print "The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] /config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image_obj)
+            print "The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] /config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image)
             fwhm_guess = config_pars['dispersion_red']  * float(raw_input(">"))
 
         # mask out 1, 2, or 3 regions of the spectrum
@@ -566,6 +566,7 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         elif option=='h':
             print_help_message()
 
+        ### image/display options ###
         # change 2d stamp scaling to linear
         elif option=='lin':
             if g102zeros is not None:
@@ -581,24 +582,34 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
                 show2dNEW('G141', par, obj, g141zeros, 'log')
 
         # change g102 2d stamp scaling to zscale
-        elif len(option)>6 and option[0:6]=='zs102=':
-            vals=option[6:]
-            zran=vals.split(',')
-            if len(zran)!=2 or isFloat(zran[0])==False or isFloat(zran[1])==False:
-                print "Invalid zrange."
-            elif g102zeros is not None:
-                show2dNEW('G102', par, obj, g102zeros, 'linear',
-                          zran1=float(zran[0]),zran2=float(zran[1]))
+        elif option=='zs102':
+            print "Enter comma-separated range for G102 zscale: z1,z2"
+            zscale = raw_input("> ")
+            zs = zscale.split(',')
+            try:
+                z1 = float(zs[0])
+                z2 = float(zs[1])
+            except ValueError:
+                print 'Invalid entry.'
+            else:
+                if g102zeros is not None:
+                    show2dNEW('G102', par, obj, g102zeros, 'linear',
+                              zran1=z1, zran2=z2)
 
-        # change g102 2d stamp scaling to zscale
-        elif len(option)>6 and option[0:6]=='zs141=':
-            vals=option[6:]
-            zran=vals.split(',')
-            if len(zran)!=2 or isFloat(zran[0])==False or isFloat(zran[1])==False:
-                print "Invalid zrange."
-            elif g141zeros is not None:
-                show2dNEW('G141', par, obj, g141zeros, 'linear',
-                          zran1=float(zran[0]),zran2=float(zran[1]))
+        # change g141 2d stamp scaling to zscale
+        elif option=='zs141':
+            print "Enter comma-separated range for G141 zscale: z1,z2"
+            zscale = raw_input("> ")
+            zs = zscale.split(',')
+            try:
+                z1 = float(zs[0])
+                z2 = float(zs[1])
+            except ValueError:
+                print 'Invalid entry.'
+            else:
+                if g141zeros is not None:
+                    show2dNEW('G141', par, obj, g141zeros, 'linear',
+                              zran1=z1, zran2=z2)
 
         # recenter full images
         elif option=='dc':
@@ -616,6 +627,22 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         elif option=='dr':
             reloadReg()
 
+        ### new options dealing with iterating objects ###
+        # can't actually go back or choose another object now, 
+        # but allow for them now just in case
+        elif option == 'b':
+            print 'Please either reject or accept this object first.'
+        elif 'obj' in option:
+            print 'Please either reject or accept this object first.'
+        # print remaining objects that have not yet been inspected
+        elif option == 'left':
+            print '    Remaining objects:'
+            print remaining
+        # print all objects in line list
+        elif option == 'list':
+            print '    All objects:'
+            print allobjects
+        
         # quit this object
         elif option=='q':
             print 'Quitting Obj %i. Nothing saved to file' % (obj)
@@ -818,6 +845,10 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     #### STEP 8:  Loop through objects ############
     #########################################################################
     remaining_objects = get_remaining_objects(objid_unique, objid_done)
+    allobjects = [unique_obj for unique_obj in objid_unique]
+
+    print '\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revist the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n'
+
     while remaining_objects.shape[0] > 0:
         ndone = len(objid_done)
         progress = float(ndone) / float(len(objid_unique))*100.
@@ -825,16 +856,15 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
         
         # do some things as long as there are still objects to inspect
         next_obj = remaining_objects[0]
-        print 'Next up, Obj %i' % (next_obj)
-        print 'Enter option:\n\tobj xxx = skip to object xxx\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tq = quit\n\tany other key = continue with Obj %i' % (next_obj)
-        o = raw_input('>')
+        print 'Next up: Obj %i' % (next_obj)
+        o = raw_input("Enter 'obj xxx' to skip to Obj xxx or hit any key to continue. > ")
 
-#        if o == 'b':
-#            # need to figure out what object came before this one
-#            w = np.where(objid_unique == remaining_objects[0])
-#            # if on first object, this will roll around to previous object
-#            next_obj = objid_unique[w[0][0]-1]
-#            print "Going back to previous object: Obj %i" % (next_obj)
+        if o == 'b':
+            # need to figure out what object came before this one
+            w = np.where(objid_unique == remaining_objects[0])
+            # if on first object, this will roll around to previous object
+            next_obj = objid_unique[w[0][0]-1]
+            print "Going back to previous object: Obj %i" % (next_obj)
 
         if o == 'left':
             #remaining_list = ', '.join(['%i'%i for i in remaining_objects])
@@ -844,7 +874,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
         
         if o == 'list':
             print '    All objects:'
-            print objid_unique    
+            print allobjects
             o = raw_input('> ')
 
         if o == 'q':
@@ -865,6 +895,7 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
         objinfo = objtable[wcatalog]
         inspect_object(parnos[0], next_obj, objinfo, lamlines_found, ston_found,
                        g102zeroarr, g141zeroarr, linelistoutfile, commentsfile,
+                       remaining_objects, allobjects, 
                        show_dispersed=show_dispersed)
         objid_done = np.append(objid_done, next_obj)
         remaining_objects = get_remaining_objects(objid_unique, objid_done)
@@ -888,8 +919,8 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
             objinfo = objtable[wcatalog]
             inspect_object(parnos[0], next_obj, objinfo, lamlines_found, 
                            ston_found, g102zeroarr, g141zeroarr, 
-                           linelistoutfile, commentsfile,
-                           show_dispersed=show_dispersed)
+                           linelistoutfile, commentsfile, remaining_objects,
+                           allobjects, show_dispersed=show_dispersed)
 
 
 ###XXX this is never actually called????
@@ -923,8 +954,6 @@ def measure_z_interactive (linelistfile=" ", show_dispersed=True, use_stored_fit
     if os.path.exists('G141_trace.reg') == True: 
         os.unlink('G141_trace.reg')
     
-
-#def checkcatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont):
 
 def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont): #parnos, objid are scalar not array. 
     if not os.path.exists(catalogname):
