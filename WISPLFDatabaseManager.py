@@ -10,7 +10,7 @@ class WISPLFDatabaseManager:
 
     def __init__(self, dbFileNamePrefix):
         self.dbFileNamePrefix = dbFileNamePrefix
-        self.dbFileName = '{}_sqllite.db'.format(self.dbFileNamePrefix)
+        self.dbFileName = '{}_sqlite.db'.format(self.dbFileNamePrefix)
         self.dbConnection = sqlite3.connect(self.dbFileName)
         self.dbCursor = self.dbConnection.cursor()
         self.checkAndInitTables()
