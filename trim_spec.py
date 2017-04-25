@@ -101,20 +101,20 @@ def trim_spec(tbdata_blue, tbdata_red, config_pars, mask_zeros=False, return_mas
         ### mask edges in wavelength where stuff gets crazy (i.e. low throughput)  
      
     ### concatenate.
-    if tbdata_blue == None: 
+    if tbdata_blue is not None: 
         lam_spec = lam_spec_red 
         flux_spec = flux_spec_red
         error_spec = error_spec_red
         contam_spec = contam_spec_red 
         zero_spec = zero_spec_red
-    if tbdata_red == None: 
+    if tbdata_red is not None: 
         lam_spec = lam_spec_blue
         flux_spec = flux_spec_blue 
         error_spec = error_spec_blue 
         contam_spec = contam_spec_blue 
         zero_spec = zero_spec_blue
     
-    if (tbdata_red != None) & (tbdata_blue != None): 
+    if (tbdata_red is not None) & (tbdata_blue is not None): 
         lam_spec = np.append(lam_spec_blue, lam_spec_red) 
         flux_spec = np.ma.append(flux_spec_blue, flux_spec_red) 
         error_spec = np.ma.append(error_spec_blue, error_spec_red) 
