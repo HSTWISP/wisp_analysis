@@ -157,6 +157,7 @@ def print_help_message():
              \t n = skip to next brightest line found in this object \n \
              \t fw = change the fwhm guess in pixels \n \
              \t c = add comment \n \
+             \t f = set/unset flag(s) \n \
              \t t = change transition wavelength \n \
              \t m1, m2, or m3 =mask up to three discontinuous wavelength regions \n \
              \t nodes = change the wavelengths for the continuum spline nodes \n \
@@ -355,18 +356,21 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
     # previously, the original results will have been stored in the SQLLite database
     # and a retrieval obtion should be offered.
     databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(par))
+    mostRecentObjectData = databaseManager.getMostRecentObject()
+    if mostRecentObjectData is not None :
+        print('Most recent object in database: Par {}, Obj {}, Date {}'.format(*mostRecentObjectData))
+    else :
+        print('Database is empty.')
     catalogueEntryData = databaseManager.loadCatalogueEntry(parNumber=par, objectId=obj)
-    loadPrevFit = None
+    acceptPrevFit = False
     if catalogueEntryData is not None :
         nonFitResults, fitResults = catalogueEntryData
         (par_db, obj_db, ra_db, dec_db, jmag_db, hmag_db, a_image_db, b_image_db, contamflag_db, entrytime_db) = nonFitResults
-        print('Found previous fit results for Pointing {}, Object {}.\nEnter "l" to load the earlier fit.'.format(par_db, obj_db))
-        loadPrevFit = raw_input('> ').strip() == 'l'
-        print('Loading previous fit.' if loadPrevFit else 'Re-fitting without loading previous fit.')
+        print('Found previous fit results for Pointing {}, Object {}.\nEnter "y" to accept the earlier fit.'.format(par_db, obj_db))
+        acceptPrevFit = raw_input('> ').strip() == 'y'
+        print('Accepting previous fit.' if acceptPrevFit else 'Re-fitting this object.')
     else :
-        print('No previous fit results found.')
-
-    loadPrevFit = loadPrevFit is not None and loadPrevFit
+        print('No previous fit results found. Fitting this object now.')
 
     # get line, fwhm, z estimate
     # choose the lamline that has the highest S/N estimate
@@ -388,7 +392,8 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
     print "\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen."
 
     comment = ' '
-    done = 0
+    # Skip if previous fit is to be accepted
+    done = 0 if not acceptPrevFit else 1
     while (done == 0):
         # sticking with the while loop to determine whether user is finished
         # with object
@@ -613,6 +618,16 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         elif option == 'c':
             print "Enter your comment here:"
             comment = raw_input("> ")
+            # sqlite3 database support - automatically creates and initializes DB if required
+            databaseManager.saveAnnotation((par, obj, comment.decode('utf-8')))
+
+        # set or unset one or more flags
+        elif option == 'f':
+            print('Enter a comma-separated list of flag, value pairs e.g. CONTAM, 1, CONTIN, 2:')
+            print('Valid flags are {}'.format(WISPLFDatabaseManager.WISPLFDatabaseManager.validFlags))
+            flagList = raw_input("> ")
+            # sqlite3 database support - automatically creates and initializes DB if required
+            databaseManager.setFlagsFromString(par, obj, flagList.decode('utf-8'))
 
         # print help message
         elif option == 'h':
@@ -707,42 +722,49 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
 
         # print "OK"
 
-    # write to file if object was accepted
-    if zset == 1:
+    # only re-save data if the previous fit was discarded
+    if not acceptPrevFit :
+        # write to file if object was accepted
+        if zset == 1 :
 
-        # sqlite3 database support - automatically creates and initializes DB if required
-        databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
-                       b_image[0], jmag[0], hmag[0], fitresults, flagcont))
+            # sqlite3 database support - automatically creates and initializes DB if required
+            databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
+                                                                                   b_image[0], jmag[0], hmag[0], fitresults, flagcont))
 
-        writeToCatalog(linelistoutfile, par, obj, ra, dec, a_image,
-                       b_image, jmag, hmag, fitresults, flagcont)
+            writeToCatalog(linelistoutfile, par, obj, ra, dec, a_image,
+                           b_image, jmag, hmag, fitresults, flagcont)
 
-        writeFitdata(fitdatafilename, spec_lam, spec_val, spec_unc,
-                     spec_con, spec_zer, full_fitmodel, full_contmodel, mask_flg)
+            writeFitdata(fitdatafilename, spec_lam, spec_val, spec_unc,
+                         spec_con, spec_zer, full_fitmodel, full_contmodel, mask_flg)
 
-        fitspec_pickle = open(fitdatafilename + '.pickle', 'wb')
-        output_meta_data = [par, obj, ra, dec, a_image, b_image,
-                            jmag, hmag, fitresults, flagcont, config_pars]
-        pickle.dump(output_meta_data, fitspec_pickle)
-        fitspec_pickle.close()
+            fitspec_pickle = open(fitdatafilename + '.pickle', 'wb')
+            output_meta_data = [par, obj, ra, dec, a_image, b_image,
+                                jmag, hmag, fitresults, flagcont, config_pars]
+            pickle.dump(output_meta_data, fitspec_pickle)
+            fitspec_pickle.close()
+        else :
+            # done == 1, but zset == 0 => rejected
+            databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
+                                                                                   b_image[0], jmag[0], hmag[0],
+                                                                                   None,
+                                                                                   None))
+            databaseManager.setFlags(par, obj, [('REJECT', 1)])
+            databaseManager.saveAnnotation((par, obj, 'REJECTED'))
 
-    # write comments to file
-    # if we go back to the previous objects, duplicate comments will still be
-    # written
-    writeComments(commentsfile, par, obj, comment)
+        # write comments to file
+        # if we go back to the previous objects, duplicate comments will still be
+        # written
+        writeComments(commentsfile, par, obj, comment)
 
-    # sqlite3 database support - automatically creates and initializes DB if required
-    # FIXME: Why not enable multiple comments per object?
-    databaseManager.saveComment((par, obj, comment.decode('utf-8')))
-
-    # write object to done file, incase process gets interrupted
-    if not os.path.exists('linelist/done'):
-        f = open('linelist/done', 'w')
-    else:
-        f = open('linelist/done', 'a')
-    f.write('%i\n' % obj)
-    f.close()
-    print '-' * 72
+        # write object to done file, incase process gets interrupted
+        if not os.path.exists('linelist/done'):
+            f = open('linelist/done', 'w')
+        else:
+            f = open('linelist/done', 'a')
+        f.write('%i\n' % obj)
+        f.close()
+    # print closing line anyway
+    print('-' * 72)
 
 
 def check_input_objid(objlist, objid):
