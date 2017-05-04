@@ -70,9 +70,14 @@ def find_cwt(lam, flux, err, zeros, fwhm_est_pix, beam_name, config_pars, plotfl
     peaks = peaks[w[0]]
     
     ### reject lines with presumably low EWs 
-    peak_contrast = (flux[peaks] - cont_filter[peaks])/cont_filter[peaks] 
-    w=np.where(peak_contrast > min_line_contrast) 
-    peaks  = peaks[w[0]]
+    try:
+        peak_contrast = (flux[peaks] - cont_filter[peaks])/cont_filter[peaks]
+    except IndexError:
+        ### added this step in case peaks fail the above conditional
+        peaks = []
+    else:
+        w=np.where(peak_contrast > min_line_contrast)
+        peaks  = peaks[w[0]]
 
     ### reject peaks that are actually zero orders 
     if np.size(peaks)  > 0: 
