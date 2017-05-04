@@ -157,6 +157,7 @@ def print_help_message():
              \t n = skip to next brightest line found in this object \n \
              \t fw = change the fwhm guess in pixels \n \
              \t c = add comment \n \
+             \t contam = specify contamination to line flux and/or continuum \n \
              \t f = set/unset flag(s) \n \
              \t t = change transition wavelength \n \
              \t m1, m2, or m3 =mask up to three discontinuous wavelength regions \n \
@@ -174,6 +175,32 @@ def print_help_message():
              \t h = print this message\n \
              \t q = quit\n"
     print msg
+
+
+def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
+    """ """
+    # string names for output 
+    linenames = np.array(['[OII]', 'Hgamma', 'Hbeta', '[OIII]', \
+                          'Halpha', '[SII]', '[SIII]', '[SIII]', 'HeI'])
+    # string names for accessing fitresults
+    fluxstrs = ['oii','hg','hb','oiii','hanii','sii','siii_9069','siii_9532']
+    linefluxes = np.array([fitresults['%s_flux'%fs] for fs in fluxstrs])
+
+    # initial message
+    print '#'*72
+    msg = '## Par{} Obj {}:\n##   Fit Redshift: z = {:.4f}\n'.format(par, obj, fitresults['redshift'])
+
+    # lines with S/N > 3
+    good_snr = np.where(snr_meas_array > 3)
+    msg = msg + '##   Lines fit with S/N > 3:\n'
+    for gsnr in good_snr[0]:
+        msg = msg + '##\t%s: Flux = %.3e    S/N = %.2f\n'%(linenames[gsnr], 
+                                linefluxes[gsnr], snr_meas_array[gsnr])
+
+    cfout = ['%s:%i'%(cf,contamflags[cf]) for cf in contamflags if contamflags[cf] > 0]
+    msg = msg + '##   Contamination flags set:\n##\t' + ', '.join(cfout)
+    print(msg)
+    print '#'*72
 
 
 def plot_object(zguess, spdata, config_pars, snr_meas_array, full_fitmodel, full_contmodel, lamlines_found, index_of_strongest_line, contmodel, plottitle):
@@ -357,20 +384,21 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
     # and a retrieval obtion should be offered.
     databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(par))
     mostRecentObjectData = databaseManager.getMostRecentObject()
-    if mostRecentObjectData is not None :
-        print('Most recent object in database: Par {}, Obj {}, Date {}'.format(*mostRecentObjectData))
-    else :
-        print('Database is empty.')
+#    if mostRecentObjectData is not None :
+#        print('Most recent object in database: Par {}, Obj {}, Date {}'.format(*mostRecentObjectData))
+#    else :
+#        print('Database is empty.')
     catalogueEntryData = databaseManager.loadCatalogueEntry(parNumber=par, objectId=obj)
     acceptPrevFit = False
     if catalogueEntryData is not None :
         nonFitResults, fitResults = catalogueEntryData
         (par_db, obj_db, ra_db, dec_db, jmag_db, hmag_db, a_image_db, b_image_db, contamflag_db, entrytime_db) = nonFitResults
-        print('Found previous fit results for Pointing {}, Object {}.\nEnter "y" to accept the earlier fit.'.format(par_db, obj_db))
-        acceptPrevFit = raw_input('> ').strip() == 'y'
-        print('Accepting previous fit.' if acceptPrevFit else 'Re-fitting this object.')
-    else :
-        print('No previous fit results found. Fitting this object now.')
+#        print('Found previous fit results for Pointing {}, Object {}.\nEnter "y" to accept the earlier fit.'.format(par_db, obj_db))
+        print('You have already fit Obj {}. Refit? [y/N]').format(obj)
+        acceptPrevFit = raw_input('> ').strip().lower() == 'n'
+#        print('Accepting previous fit.' if acceptPrevFit else 'Re-fitting this object.')
+#    else :
+#        print('No previous fit results found. Fitting this object now.')
 
     # get line, fwhm, z estimate
     # choose the lamline that has the highest S/N estimate
@@ -389,9 +417,12 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
     print
     print "=" * 72
     print "Par%i Obj %i:" % (par, obj)
+    print "Initial redshift guess: z = %f" % (zguess)
     print "\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen."
 
     comment = ' '
+    contamflags = {'o2':0, 'hg':0, 'hb':0, 'o3':0, 'ha':0, 's2':0, 's31':0, \
+                   's32':0, 'he1':0}
     # Skip if previous fit is to be accepted
     done = 0 if not acceptPrevFit else 1
     while (done == 0):
@@ -458,7 +489,7 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         # plot the whole goddamn thing
         plot_object(zguess, spdata, config_pars, snr_meas_array, full_fitmodel,
                     full_contmodel, lamlines_found, index_of_strongest_line, contmodel, plottitle)
-        print "    Guess Redshift: z = %f" % (zguess)
+#        print "    Guess Redshift: z = %f" % (zguess)
         print "    Fit Redshift:   z = %f\n" % (zfit)
         # input
         option = raw_input("> ")
@@ -482,6 +513,9 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
             done = 1
             zset = 1
             flagcont = 2
+            # add to contamination flags
+            for k,v in contamflags.iteritems():
+                contamflags[k] = contamflags[k] | 1
 
         # change redshift guess
         elif option == 'z':
@@ -614,6 +648,21 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         elif option == 's32':
             zguess = (lamline / lam_Siii_2) - 1
 
+        # note contamination
+        elif option == 'contam':
+            print "Specify contamination.\nEnter a comma-separated list of identifiers choosing from:\n  o2,hg,hb,o3,ha,s2,s31,s32,he1,c(ontinuum)"
+            cf = raw_input("> ")
+            cflags = [thing.strip() for thing in cf.split(',')]
+            if 'c' in cflags:
+                for k,v in contamflags.iteritems():
+                    contamflags[k] = contamflags[k] | 2
+            cflaglines = [thing for thing in cflags if thing != 'c']
+            for contamflag in cflaglines:
+                try:
+                    contamflags[contamflag] = contamflags[contamflag] | 4
+                except KeyError:
+                    print '%s not known. Skipping'%contamflag
+
         # add a comment
         elif option == 'c':
             print "Enter your comment here:"
@@ -726,13 +775,16 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
     if not acceptPrevFit :
         # write to file if object was accepted
         if zset == 1 :
-
+            # write object summary
+            write_object_summary(par, obj, fitresults, snr_meas_array, 
+                                 contamflags)
+        
             # sqlite3 database support - automatically creates and initializes DB if required
             databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
                                                                                    b_image[0], jmag[0], hmag[0], fitresults, flagcont))
 
             writeToCatalog(linelistoutfile, par, obj, ra, dec, a_image,
-                           b_image, jmag, hmag, fitresults, flagcont)
+                           b_image, jmag, hmag, fitresults, contamflags)
 
             writeFitdata(fitdatafilename, spec_lam, spec_val, spec_unc,
                          spec_con, spec_zer, full_fitmodel, full_contmodel, mask_flg)
@@ -1039,7 +1091,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
 
 
 # parnos, objid are scalar not array.
-def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont):
+def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, contamflags):
     if not os.path.exists(catalogname):
         cat = open(catalogname, 'w')
         cat.write('#1  ParNo\n')
@@ -1060,31 +1112,41 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
         cat.write('#16 oii_flux \n')
         cat.write('#17 oii_error \n')
         cat.write('#18 oii_EW_obs \n')
-        cat.write('#19 hg_flux \n')
-        cat.write('#20 hg_err \n')
-        cat.write('#21 hg_EW_obs \n')
-        cat.write('#22 hb_flux \n')
-        cat.write('#23 hb_err \n')
-        cat.write('#24 hb_EW_obs \n')
-        cat.write('#25 oiii_flux [both lines] \n')
-        cat.write('#26 oiii_err [both lines] \n')
-        cat.write('#27 oiii_EW_obs [both lines] \n')
-        cat.write('#28 hanii_flux \n')
-        cat.write('#29 hanii_err \n')
-        cat.write('#30 hanii_EW_obs \n')
-        cat.write('#31 sii_flux \n')
-        cat.write('#32 sii_err \n')
-        cat.write('#33 sii_EW_obs \n')
-        cat.write('#34 siii_9069_flux \n')
-        cat.write('#35 siii_9069_err \n')
-        cat.write('#36 siii_9069_EW_obs \n')
-        cat.write('#37 siii_9532_flux \n')
-        cat.write('#38 siii_9532_err \n')
-        cat.write('#39 siii_9532_EW_obs \n')
-        cat.write('#40 he1_10830_flux \n')
-        cat.write('#41 he1_10830_err \n')
-        cat.write('#42 he1_10830_EW_obs \n')
-        cat.write('#43 ContamFlag \n')
+        cat.write('#19 oii_contam \n')
+        cat.write('#20 hg_flux \n')
+        cat.write('#21 hg_err \n')
+        cat.write('#22 hg_EW_obs \n')
+        cat.write('#22 hg_contam \n')
+        cat.write('#23 hb_flux \n')
+        cat.write('#24 hb_err \n')
+        cat.write('#25 hb_EW_obs \n')
+        cat.write('#26 hb_contam \n')
+        cat.write('#27 oiii_flux [both lines] \n')
+        cat.write('#28 oiii_err [both lines] \n')
+        cat.write('#29 oiii_EW_obs [both lines] \n')
+        cat.write('#30 oiii_contam [both lines] \n')
+        cat.write('#31 hanii_flux \n')
+        cat.write('#32 hanii_err \n')
+        cat.write('#33 hanii_EW_obs \n')
+        cat.write('#34 hanii_contam \n')
+        cat.write('#35 sii_flux \n')
+        cat.write('#36 sii_err \n')
+        cat.write('#37 sii_EW_obs \n')
+        cat.write('#38 sii_contam \n')
+        cat.write('#39 siii_9069_flux \n')
+        cat.write('#40 siii_9069_err \n')
+        cat.write('#41 siii_9069_EW_obs \n')
+        cat.write('#42 siii_9069_contam \n')
+        cat.write('#43 siii_9532_flux \n')
+        cat.write('#44 siii_9532_err \n')
+        cat.write('#45 siii_9532_EW_obs \n')
+        cat.write('#46 siii_9532_contam \n')
+        cat.write('#47 he1_10830_flux \n')
+        cat.write('#48 he1_10830_err \n')
+        cat.write('#49 he1_10830_EW_obs \n')
+        cat.write('#50 he1_10830_contam \n')
+
+#        cat.write('#43 ContamFlag \n')
         cat.close()
        # cat.write('#45 Comment \n')
 
@@ -1099,21 +1161,50 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
         '{:<8.2f}'.format(hmag_obj[0]) + \
         '{:<8.3f}'.format(a_image_obj[0]) + \
         '{:<8.3f}'.format(b_image_obj[0]) + \
-        '{:>8.4f}'.format(fitresults['redshift']) + '{:>10.4f}'.format(fitresults['redshift_err']) +\
+        '{:>8.4f}'.format(fitresults['redshift']) + \
+        '{:>10.4f}'.format(fitresults['redshift_err']) +\
         '{:>10.4f}'.format(fitresults['dz_oiii'])  + \
         '{:>10.4f}'.format(fitresults['dz_oii'])   + \
         '{:>10.4f}'.format(fitresults['dz_siii_he1']) +\
-        '{:>10.2f}'.format(fitresults['fwhm_g141']) + '{:>10.2f}'.format(fitresults['fwhm_g141_err'])  +  \
-        '{:>13.2e}'.format(fitresults['oii_flux'])  + '{:>13.2e}'.format(fitresults['oii_error']) +  '{:>13.2e}'.format(fitresults['oii_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['hg_flux']) + '{:>13.2e}'.format(fitresults['hg_error']) + '{:>13.2e}'.format(fitresults['hg_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['hb_flux']) + '{:>13.2e}'.format(fitresults['hb_error']) + '{:>13.2e}'.format(fitresults['hb_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['oiii_flux']) + '{:>13.2e}'.format(fitresults['oiii_error']) + '{:>13.2e}'.format(fitresults['oiii_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['hanii_flux']) + '{:>13.2e}'.format(fitresults['hanii_error']) + '{:>13.2e}'.format(fitresults['hanii_ew_obs']) + \
-        '{:>13.2e}'.format(fitresults['sii_flux']) + '{:>13.2e}'.format(fitresults['sii_error']) + '{:>13.2e}'.format(fitresults['sii_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['siii_9069_flux']) + '{:>13.2e}'.format(fitresults['siii_9069_error']) + '{:>13.2e}'.format(fitresults['siii_9069_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['siii_9532_flux']) + '{:>13.2e}'.format(fitresults['siii_9532_error']) + '{:>13.2e}'.format(fitresults['siii_9532_ew_obs']) +\
-        '{:>13.2e}'.format(fitresults['he1_flux']) + '{:>13.2e}'.format(fitresults['he1_error']) +  '{:>12.2e}'.format(fitresults['he1_ew_obs']) +\
-             '   ' + '{:<6d}'.format(flagcont) + ' \n'
+        '{:>10.2f}'.format(fitresults['fwhm_g141']) + \
+        '{:>10.2f}'.format(fitresults['fwhm_g141_err'])  +  \
+        '{:>13.2e}'.format(fitresults['oii_flux'])  + \
+        '{:>13.2e}'.format(fitresults['oii_error']) +  \
+        '{:>13.2e}'.format(fitresults['oii_ew_obs']) +\
+        '{:>6d}'.format(contamflags['o2']) +\
+        '{:>13.2e}'.format(fitresults['hg_flux']) +\
+        '{:>13.2e}'.format(fitresults['hg_error']) + \
+        '{:>13.2e}'.format(fitresults['hg_ew_obs']) +\
+        '{:>6d}'.format(contamflags['hg']) +\
+        '{:>13.2e}'.format(fitresults['hb_flux']) + \
+        '{:>13.2e}'.format(fitresults['hb_error']) + \
+        '{:>13.2e}'.format(fitresults['hb_ew_obs']) +\
+        '{:>6d}'.format(contamflags['hb']) +\
+        '{:>13.2e}'.format(fitresults['oiii_flux']) + \
+        '{:>13.2e}'.format(fitresults['oiii_error']) + \
+        '{:>13.2e}'.format(fitresults['oiii_ew_obs']) +\
+        '{:>6d}'.format(contamflags['o3']) +\
+        '{:>13.2e}'.format(fitresults['hanii_flux']) + \
+        '{:>13.2e}'.format(fitresults['hanii_error']) + \
+        '{:>13.2e}'.format(fitresults['hanii_ew_obs']) + \
+        '{:>6d}'.format(contamflags['ha']) +\
+        '{:>13.2e}'.format(fitresults['sii_flux']) + \
+        '{:>13.2e}'.format(fitresults['sii_error']) + \
+        '{:>13.2e}'.format(fitresults['sii_ew_obs']) +\
+        '{:>6d}'.format(contamflags['s2']) +\
+        '{:>13.2e}'.format(fitresults['siii_9069_flux']) + \
+        '{:>13.2e}'.format(fitresults['siii_9069_error']) + \
+        '{:>13.2e}'.format(fitresults['siii_9069_ew_obs']) +\
+        '{:>6d}'.format(contamflags['s31']) +\
+        '{:>13.2e}'.format(fitresults['siii_9532_flux']) + \
+        '{:>13.2e}'.format(fitresults['siii_9532_error']) + \
+        '{:>13.2e}'.format(fitresults['siii_9532_ew_obs']) +\
+        '{:>6d}'.format(contamflags['s32']) +\
+        '{:>13.2e}'.format(fitresults['he1_flux']) + \
+        '{:>13.2e}'.format(fitresults['he1_error']) + \
+        '{:>12.2e}'.format(fitresults['he1_ew_obs']) +\
+        '{:>6d}'.format(contamflags['he1']) + '\n'
+        #     '   ' + '{:<6d}'.format(flagcont) + ' \n'
 
 #    """
     # if a row already exists for this object, comment it out

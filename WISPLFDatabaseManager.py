@@ -53,7 +53,7 @@ class WISPLFDatabaseManager:
                      'he1_ew_obs']
 
     def __init__(self, dbFileNamePrefix):
-        print('Using sqlite3 version {}'.format(sqlite3.version))
+#        print('Using sqlite3 version {}'.format(sqlite3.version))
         self.dbFileNamePrefix = dbFileNamePrefix
         self.dbFileName = '{}_sqlite.db'.format(self.dbFileNamePrefix)
         self.dbConnection = sqlite3.connect(self.dbFileName)
@@ -71,7 +71,7 @@ class WISPLFDatabaseManager:
         self.createFlagTable()
 
     def createCatalogueTable(self):
-        print('Creating catalogue table in SQLLite database...')
+#        print('Creating catalogue table in SQLLite database...')
         self.dbCursor.execute('''CREATE TABLE IF NOT EXISTS catalogue (
                               ParNo int,
                               ObjID int,
@@ -119,22 +119,22 @@ class WISPLFDatabaseManager:
                               EntryTime text
                               )''')
         self.dbConnection.commit()
-        print('Done.' if self.dbCursor.rowcount >
-              0 else 'Table was already present.')
+#        print('Done.' if self.dbCursor.rowcount >
+#              0 else 'Table was already present.')
 
     def createAnnotationTable(self):
-        print('Creating annotations table in SQLLite database...')
+#        print('Creating annotations table in SQLLite database...')
         self.dbCursor.execute('''CREATE TABLE IF NOT EXISTS annotations (
                          ParNo int,
                          ObjID int,
                          Comment text
                          )''')
         self.dbConnection.commit()
-        print('Done.' if self.dbCursor.rowcount >
-              0 else 'Table was already present.')
+#        print('Done.' if self.dbCursor.rowcount >
+#              0 else 'Table was already present.')
 
     def createFlagTable(self):
-        print('Creating annotations table in SQLLite database...')
+#        print('Creating annotations table in SQLLite database...')
         self.dbCursor.execute('''CREATE TABLE IF NOT EXISTS flags (
                          ParNo int,
                          ObjID int,
@@ -142,8 +142,8 @@ class WISPLFDatabaseManager:
                          FlagValue int
                          )''')
         self.dbConnection.commit()
-        print('Done.' if self.dbCursor.rowcount >
-              0 else 'Table was already present.')
+#        print('Done.' if self.dbCursor.rowcount >
+#              0 else 'Table was already present.')
 
     def saveCatalogueEntry(self, catalogueEntryData):
         query = 'INSERT INTO catalogue VALUES ({})'.format(
