@@ -74,13 +74,21 @@ suplines = [lam_Oii, lam_Hg, lam_Hbeta, lam_Oiii_2,
             lam_Halpha, lam_Sii, lam_Siii_1, lam_Siii_2, lam_He]
 suplines_str = ['[OII]', r'H$\gamma$', r'H$\beta$', '[OIII]',
                 r'H$\alpha$', '[SII]', '[SIII]', '[SIII]', 'HeI']
+
+# colors to help split up terminal output
+# helpmsg = light blue
+# obj = purple/magenta
+# heading = green
+# accept = green
+# interim = cyan
+# endc = clear color
+setcolors = {'helpmsg':'\033[94m', \
+             'obj':'\033[95m', \
+             'heading':'\033[92m', \
+             'accept':'\033[92m', \
+             'interim':'\033[36m', \
+             'endc':'\033[0m'}
 #######################################################################
-class bcolors:
-    HELPMSG = '\033[94m'
-    PROMPT = '\033[95m'
-    HEADING = '\033[92m'
-    BULLSHIT = '\033[36m'
-    ENDC = '\033[0m'
 
 
 def isFloat(string):
@@ -156,46 +164,43 @@ def print_help_message():
     """
     Just putting this here to keep it out of the way.
     """
-    msg = bcolors.HELPMSG + "Available Options:\n"
-    msg += bcolors.HEADING + "\tOBJECT SPECIFIC OPTIONS:\n"
-    msg += bcolors.HELPMSG + "\ta = accept object fit\n" \
+    msg = setcolors['helpmsg'] + "Available Options:\n"
+    msg += setcolors['heading'] + "\tOBJECT SPECIFIC OPTIONS:\n"
+    msg += setcolors['helpmsg'] + "\ta = accept object fit\n" \
         "\tac = accept object fit, noting contamination\n"  \
         "\tr = reject object\n" \
         "\tc = add comment\n" \
         "\tcontam = specify contamination to line flux and/or continuum\n" \
         "\treset = reset interactive options back to default for this object\n\n"
-    msg += bcolors.HEADING + "\tEMISSION LINE SPECIFIC OPTIONS:\n"
-    msg += bcolors.HELPMSG + "\tz = enter a different z guess\n" \
+    msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n"
+    msg += setcolors['helpmsg'] + "\tz = enter a different z guess\n" \
         "\tw = enter a different emission line wavelength guess\n" \
         "\tha,  or hb, o31, o32, o2, s2, s31, s32 = change redshift guess\n" \
         "\tn = skip to next brightest line found in this object\n\n"
-    msg += bcolors.HEADING + "\tSPECTRUM SPECIFIC OPTIONS:\n"
-    msg += bcolors.HELPMSG + "\tfw = change the fwhm guess in pixels\n" \
+    msg += setcolors['heading'] + "\tSPECTRUM SPECIFIC OPTIONS:\n"
+    msg += setcolors['helpmsg'] + "\tfw = change the fwhm guess in pixels\n" \
         "\tt = change transition wavelength\n" \
         "\tm1, m2, or m3 = mask up to three discontinuous wavelength regions\n" \
         "\tnodes = change the wavelengths for the continuum spline nodes\n" \
         "\tbluecut = change the blue cutoff of the G102 spec\n" \
         "\tredcut  = change the red cutoff of the G141 spec\n\n"
-    msg += bcolors.HEADING + "\tDS9 SPECIFIC OPTIONS:\n"
-    msg += bcolors.HELPMSG + "\tlin = linear z-scale\n" \
+    msg += setcolors['heading'] + "\tDS9 SPECIFIC OPTIONS:\n"
+    msg += setcolors['helpmsg'] + "\tlin = linear z-scale\n" \
         "\tlog = logarithmic\n" \
         "\tzs102 = z1,z2 comma-separated range for G102 zscale\n" \
         "\tzs141 = z1,z2 comma-separated range for G141 zscale\n" \
         "\tdc = recenter direct images\n" \
         "\treload = reload direct images\n" \
         "\tdr = reload direct image reg files\n\n" 
-    msg += bcolors.HEADING + "\tSOFTWARE SPECIFIC OPTIONS: \n"
-    msg += bcolors.HELPMSG + "\th = print this message\n" \
-        "\tq = quit\n" + bcolors.ENDC
+    msg += setcolors['heading'] + "\tSOFTWARE SPECIFIC OPTIONS: \n"
+    msg += setcolors['helpmsg'] + "\th = print this message\n" \
+        "\tq = quit\n" + setcolors['endc']
 
     print(msg)
 
 
-def print_prompt(prompt, prompt_type='one'):
-    if prompt_type == 'one':
-        print(bcolors.PROMPT + prompt + bcolors.ENDC)
-    if prompt_type == 'two':
-        print(bcolors.BULLSHIT + prompt + bcolors.ENDC)
+def print_prompt(prompt, prompt_type='obj'):
+    print(setcolors[prompt_type] + prompt + setcolors['endc'])
 
 
 def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
@@ -208,7 +213,7 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
     linefluxes = np.array([fitresults['%s_flux'%fs] for fs in fluxstrs])
 
     # initial message
-    msg = bcolors.HEADING + '#'*72
+    msg = setcolors['accept'] + '#'*72
     msg += '\n## Par{} Obj {}:\n##   Fit Redshift: z = {:.4f}\n'.format(par, obj, fitresults['redshift'])
 
     # lines with S/N > 3
@@ -220,14 +225,14 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
 
     cfout = ['%s:%i'%(cf,contamflags[cf]) for cf in contamflags if contamflags[cf] > 0]
     msg += '##   Contamination flags set:\n##\t' + ', '.join(cfout) + '\n'
-    msg += '#'*72 + bcolors.ENDC
+    msg += '#'*72 + setcolors['endc']
     print(msg)
 
 
 def make_tarfile(outdir):
     """ """
     # copy defauly.config into output directory to keep a copy
-    shutil('default.config', outdir)
+    shutil.copy('default.config', outdir)
     with tarfile.open('%s.tar.gz'%outdir, 'w:gz') as tar:
         tar.add(outdir, arcname=os.path.basename(outdir))
 
@@ -295,20 +300,31 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
         # use data coordinates for x-axis and axes coords for y-axis
         trans = mtransforms.blended_transform_factory(
             ax.transData, ax.transAxes)
-        ax.fill_between(spec_lam, 0, 1, where=spec_zero_bad == 1, color='red',
-                        alpha=0.3, transform=trans, label='Major 0th order contam')
-        ax.fill_between(spec_lam, 0, 1, where=spec_zero_mild == 1, color='orange',
-                        alpha=0.3, transform=trans, label='Minor 0th order contam')
+        if np.any(spec_zero_bad[spec_zero_bad != -1]):
+            ax.fill_between(spec_lam, 0, 1, where=spec_zero_bad == 1, 
+                            color='red', alpha=0.3, transform=trans, 
+                            label='Major 0th order contam')
+        if np.any(spec_zero_mild[spec_zero_mild != -1]):
+            ax.fill_between(spec_lam, 0, 1, where=spec_zero_mild == 1, 
+                            color='orange', alpha=0.3, transform=trans, 
+                            label='Minor 0th order contam')
 
     # plot any masked regions
-    for mr, label in zip(['mask_region1', 'mask_region2', 'mask_region3'], ['masked regions', None, None]):
+    for mr in ['mask_region1', 'mask_region2', 'mask_region3']:
         if (config_pars[mr][0] != 0.) & (config_pars[mr][1] != 0.):
             for ax in [ax1, ax2]:
                 trans = mtransforms.blended_transform_factory(
                     ax.transData, ax.transAxes)
-                ax.fill_between(
-                    config_pars[mr], 0, 1, color='grey', alpha=0.3, transform=trans, label=label)
-    ax1.legend(bbox_to_anchor=[1.05, 1.15], loc='upper right')
+                handles, labels = ax.get_legend_handles_labels()
+                if 'masked regions' in labels:
+                    maskedlabel = None
+                else:
+                    maskedlabel = 'masked regions'
+                ax.fill_between(config_pars[mr], 0, 1, color='grey', 
+                                alpha=0.3, transform=trans, label=maskedlabel)
+    handles, labels = ax.get_legend_handles_labels()
+    if len(labels) > 0:
+        ax1.legend(bbox_to_anchor=[1.05, 1.15], loc='upper right')
 
     # find values of spec_lam nearest to the nodes
     nodelam = config_pars['node_wave']
@@ -569,14 +585,14 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             zguess = float(raw_input("> "))
 
         # change wavelength guess
-        elif option == 'w':
+        elif option.strip().lower() == 'w':
             print_prompt("The current emission line wavelength is: %f\nEnter Wavelength Guess in Angstroms:" % lamline)
             zguess = float(raw_input("> ")) / lam_Halpha - 1.
 
         # change the fwhm guess
         elif option.strip().lower() == 'fw':
             print_prompt("Enter a Guess for FWHM in pixels")
-            print_prompt("The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] / config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image))
+            print_prompt("The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] / config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image[0]))
             fwhm_guess = config_pars['dispersion_red'] * float(raw_input(">"))
 
         # mask out 1, 2, or 3 regions of the spectrum
@@ -647,6 +663,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             index_of_strongest_line = 0
             lamline = lamlines_found[index_of_strongest_line]
             zguess = lamline / lam_Halpha - 1
+            # reset contamflags
+            for k, v in contamflags.iteritems():
+                    contamflags[k] = contamflags[k] & 0
 
         # change the blue cutoff of G102 (or whichever grism is present?)
         elif option.strip().lower() == 'bluecut':
@@ -802,11 +821,11 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             print_prompt('Please either reject or accept this object first.')
         # print remaining objects that have not yet been inspected
         elif option.strip().lower() == 'left':
-            print_prompt('    Remaining objects:')
+            print_prompt('Remaining objects:')
             print remaining
         # print all objects in line list
         elif option.strip().lower() == 'list':
-            print_prompt('    All objects:')
+            print_prompt('All objects:')
             print allobjects
 
         # quit this object
@@ -876,8 +895,8 @@ def check_input_objid(objlist, objid):
     """ """
     fulllist = ', '.join(['%i' % o for o in objlist])
     if objid not in objlist:
-        print '   Obj %i is not in the line list' % (objid)
-        print '   Full line list: \n%s' % (fulllist)
+        print_prompt('Obj %i is not in the line list'%(objid), prompt_type='interim')
+        print_prompt('Full line list: \n%s'%(fulllist), prompt_type='interim')
         o = raw_input('Please try again: > ')
         objid = int(re.search('\d+', o).group())
     return objid
@@ -888,9 +907,15 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     ###########################################################################
     tmp = glob('Par*BEAM*.dat')[0]
     par = tmp.split('_')[0]
-    print_prompt('You are about to inspect emission lines identified in {}'.format(par))
-    print_prompt('Please enter your name or desired username')
-    user = raw_input('> ')
+    print_prompt('You are about to inspect emission lines identified in {}'.format(par), prompt_type='interim')
+    print_prompt('Please enter your name or desired username', prompt_type='interim')
+    while True:
+        user = raw_input('> ')
+        if len(user) == 0:
+            print_prompt('Username required', prompt_type='interim')
+            continue
+        else:
+            break
     user = user.strip().lower()
     # create output directory
     outdir = '%s_output_%s'%(par,user)
@@ -910,16 +935,16 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     if linelistfile == " ":
         files = glob('linelist/Par*lines.dat')
         if len(files) == 0:
-            print 'No line list file found'
+            print_prompt('No line list file found', prompt_type='interim')
             return 0
         else:
             linelistfile = files[0]
 
     if not os.path.exists(linelistfile):
-        print "Invalid path to line list file: %s" % (linelistfile)
+        print_prompt("Invalid path to line list file: %s" % (linelistfile), prompt_type='interim')
         return 0
     else:
-        print 'Found line list file: %s' % (linelistfile)
+        print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
 
     #### STEP 2:   read the list of candidate lines  ####################
     ###########################################################################
@@ -947,7 +972,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     donefile = 'linelist/done_%s'%user
 
     if os.path.isfile(linelistoutfile):
-        print '\n Output file: \n  %s, \nalready exists\n' % linelistoutfile
+        print_prompt('\nOutput file: \n  %s \nalready exists\n' % linelistoutfile, prompt_type='interim')
         ask = raw_input('Append? [Y/n] ')
         if ask.lower() == 'n':
             os.unlink(linelistoutfile)
@@ -1059,16 +1084,16 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     remaining_objects = get_remaining_objects(objid_unique, objid_done)
     allobjects = [unique_obj for unique_obj in objid_unique]
 
-    print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n')
+    print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n', prompt_type='interim')
 
     while remaining_objects.shape[0] > 0:
         ndone = len(objid_done)
         progress = float(ndone) / float(len(objid_unique)) * 100.
-        print_prompt("\nProgress: %.1f percent" % (progress),prompt_type='two')
+        print_prompt("\nProgress: %.1f percent" % (progress),prompt_type='interim')
 
         # do some things as long as there are still objects to inspect
         next_obj = remaining_objects[0]
-        print_prompt('Next up: Obj %i' % (next_obj),prompt_type='two')
+        print_prompt('Next up: Obj %i' % (next_obj),prompt_type='interim')
         o = raw_input(
             "Enter 'obj xxx' to skip to Obj xxx or hit any key to continue. > ")
 
@@ -1077,21 +1102,21 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             w = np.where(objid_unique == remaining_objects[0])
             # if on first object, this will roll around to previous object
             next_obj = objid_unique[w[0][0] - 1]
-            print_prompt("Going back to previous object: Obj %i" % (next_obj),prompt_type='two')
+            print_prompt("Going back to previous object: Obj %i" % (next_obj),prompt_type='interim')
 
         if o.strip().lower() == 'left':
             #remaining_list = ', '.join(['%i'%i for i in remaining_objects])
-            print_prompt('    Remaining objects:', prompt_type='two')
+            print_prompt('Remaining objects:', prompt_type='interim')
             print remaining_objects
             o = raw_input('> ')
 
         if o.strip().lower() == 'list':
-            print_prompt('    All objects:', prompt_type='two')
+            print_prompt('All objects:', prompt_type='interim')
             print allobjects
             o = raw_input('> ')
 
         if o.strip().lower() == 'q':
-            print_prompt("Quitting; saved through previously completed object.",prompt_type='two')
+            print_prompt("Quitting; saved through previously completed object.",prompt_type='interim')
             return 0
 
         elif 'obj' in o:
@@ -1116,26 +1141,28 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     redo = ' '
     while redo != 'q':
         print "You've finished this field.\nEnter an object ID below to revisit a particular object.\nOtherwise enter 'q' to quit the field."
-        redo = raw_input("> ")
-        try:
-            next_obj = int(redo)
-        except ValueError:
-            print "Invalid entry. Enter an object ID or enter 'q' to quit"
-        else:
-            next_obj = check_input_objid(objid_unique, next_obj)
-            # pass the information for this object
-            wlinelist = np.where(objid == next_obj)
-            lamlines_found = wavelen[wlinelist]
-            ston_found = ston[wlinelist]
-            wcatalog = np.where(objtable['Beam'] == next_obj)
-            objinfo = objtable[wcatalog]
-            inspect_object(user, parnos[0], next_obj, objinfo, lamlines_found,
-                           ston_found, g102zeroarr, g141zeroarr,
-                           linelistoutfile, commentsfile, remaining_objects,
-                           allobjects, show_dispersed=show_dispersed)
+        redo = raw_input("> ").strip().lower()
+        if redo != 'q':
+            try:
+                next_obj = int(re.search('\d+', redo).group())
+            except ValueError:
+                print "Invalid entry. Enter an object ID or enter 'q' to quit"
+            else:
+                next_obj = check_input_objid(objid_unique, next_obj)
+                # pass the information for this object
+                wlinelist = np.where(objid == next_obj)
+                lamlines_found = wavelen[wlinelist]
+                ston_found = ston[wlinelist]
+                wcatalog = np.where(objtable['obj'] == next_obj)
+                objinfo = objtable[wcatalog]
+                inspect_object(user, parnos[0], next_obj, objinfo, 
+                               lamlines_found, ston_found, g102zeroarr, 
+                               g141zeroarr, linelistoutfile, commentsfile, 
+                               remaining_objects, allobjects, 
+                               show_dispersed=show_dispersed)
 
     make_tarfile(outdir)
-    print_prompt('A tarfile of your outputs has been created: %s.tar.gz'%outdir, prompt_type='two')
+    print_prompt('A tarfile of your outputs has been created: %s.tar.gz'%outdir, prompt_type='interim')
         
 
 # XXX this is never actually called????
