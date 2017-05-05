@@ -9,12 +9,85 @@ class WISPLFDatabaseManager:
     WISP line-finding process.
     """
 
-    validFlags = [
-        'REJECT',
-        'CONTAM',
+    validMutableFlags = [
         'ZEROTH',
         'CONTIN',
         'MISC'
+    ]
+
+    validFlags = [
+        'CONTAM',
+        'REJECT'
+    ] + validMutableFlags
+
+    validContamFlags = ['o2',
+                        'hg',
+                        'hb',
+                        'o3',
+                        'ha',
+                        's2',
+                        's31',
+                        's32',
+                        'he1',
+                        'c']
+
+    tableNames = ['catalogue',
+                  'annotations',
+                  'flags'
+                  ]
+
+    lineListHeadings = [
+        'ParNo',
+        'ObjID',
+        'RA',
+        'Dec',
+        'Jmagnitude [99.0 denotes no detection]',
+        'Hmagnitude [99.0 denotes no detection]',
+        'A_IMAGE',
+        'B_IMAGE',
+        'redshift',
+        'redshift_err',
+        'dz_oiii',
+        'dz_oii',
+        'dz_siii_he1',
+        'G141_FWHM_Obs [Angs]',
+        'G141_FWHM_Obs_err',
+        'oii_flux',
+        'oii_error',
+        'oii_EW_obs',
+        'oii_contam',
+        'hg_flux',
+        'hg_err',
+        'hg_EW_obs',
+        'hg_contam',
+        'hb_flux',
+        'hb_err',
+        'hb_EW_obs',
+        'hb_contam',
+        'oiii_flux [both lines]',
+        'oiii_err [both lines]',
+        'oiii_EW_obs [both lines]',
+        'oiii_contam [both lines]',
+        'hanii_flux',
+        'hanii_err',
+        'hanii_EW_obs',
+        'hanii_contam',
+        'sii_flux',
+        'sii_err',
+        'sii_EW_obs',
+        'sii_contam',
+        'siii_9069_flux',
+        'siii_9069_err',
+        'siii_9069_EW_obs',
+        'siii_9069_contam',
+        'siii_9532_flux',
+        'siii_9532_err',
+        'siii_9532_EW_obs',
+        'siii_9532_contam',
+        'he1_10830_flux',
+        'he1_10830_err',
+        'he1_10830_EW_obs',
+        'he1_10830_contam',
     ]
 
     fitResultKeys = ['redshift',
@@ -53,7 +126,7 @@ class WISPLFDatabaseManager:
                      'he1_ew_obs']
 
     def __init__(self, dbFileNamePrefix):
-#        print('Using sqlite3 version {}'.format(sqlite3.version))
+        #        print('Using sqlite3 version {}'.format(sqlite3.version))
         self.dbFileNamePrefix = dbFileNamePrefix
         self.dbFileName = '{}_sqlite.db'.format(self.dbFileNamePrefix)
         self.dbConnection = sqlite3.connect(self.dbFileName)
@@ -71,7 +144,7 @@ class WISPLFDatabaseManager:
         self.createFlagTable()
 
     def createCatalogueTable(self):
-#        print('Creating catalogue table in SQLLite database...')
+        #        print('Creating catalogue table in SQLLite database...')
         self.dbCursor.execute('''CREATE TABLE IF NOT EXISTS catalogue (
                               ParNo int,
                               ObjID int,
@@ -123,7 +196,7 @@ class WISPLFDatabaseManager:
 #              0 else 'Table was already present.')
 
     def createAnnotationTable(self):
-#        print('Creating annotations table in SQLLite database...')
+        #        print('Creating annotations table in SQLLite database...')
         self.dbCursor.execute('''CREATE TABLE IF NOT EXISTS annotations (
                          ParNo int,
                          ObjID int,
@@ -134,7 +207,7 @@ class WISPLFDatabaseManager:
 #              0 else 'Table was already present.')
 
     def createFlagTable(self):
-#        print('Creating annotations table in SQLLite database...')
+        #        print('Creating annotations table in SQLLite database...')
         self.dbCursor.execute('''CREATE TABLE IF NOT EXISTS flags (
                          ParNo int,
                          ObjID int,
@@ -251,11 +324,18 @@ class WISPLFDatabaseManager:
         # Only attempt to set values for valid flags
         flagData = [(parNumber, objId, flagDatum[0], flagDatum[1])
                     for flagDatum in flagData
-                    if flagDatum[0] in WISPLFDatabaseManager.validFlags]
+                    if flagDatum[0] in WISPLFDatabaseManager.validFlags + WISPLFDatabaseManager.validContamFlags ]
         # flagData can be a list of (flagName, flagValue) tuples
         query = 'INSERT INTO flags VALUES (?, ?, ?, ?)'
         self.dbCursor.executemany(query, flagData)
         self.dbConnection.commit()
 
+    def resetDatabaseTables(self):
+        query = 'DROP TABLE IF EXISTS {}'
+        for tableName in WISPLFDatabaseManager.tableNames :
+            self.dbCursor.execute(query.format(tableName))
+            self.dbConnection.commit()
+        self.checkAndInitTables()
+
     def writeCatalogueTextFile(self):
-        pass
+        catalogueQuery = 'SELECT * FROM catalogue'
