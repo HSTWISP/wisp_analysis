@@ -34,5 +34,6 @@ import pickle
 try:
     from stacking import * 
 except ImportError:
-    print 'No stacking module. It is not needed for line finding. Skipping'
+    pass
+#    print 'No stacking module. It is not needed for line finding. Skipping'
 

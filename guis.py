@@ -6,7 +6,7 @@ from wisp_analysis import *
 from distutils.sysconfig import *
 
 
-def show2dNEW (grism,parno,obid,zeroarr,trans,zran1=-0.2,zran2=0.75):
+def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75):
 # In version 1.0, will first look for wavelength-calibrated stamps in the G1??_DRIZZLE directories; failing this, will default to old stamps
     # zero and first order positions
 #    firstx = firstarr['x']
@@ -56,7 +56,7 @@ def show2dNEW (grism,parno,obid,zeroarr,trans,zran1=-0.2,zran2=0.75):
     cx = (cx - hdr['CRPIX1'])*hdr['CDELT1'] + hdr['CRVAL1']
     cy = (cy - hdr['CRPIX2'])*hdr['CDELT2'] + hdr['CRVAL2']
     rad = 5 * hdr['CDELT1']
-    outcoo=par_root_dir+"Spectra/temp_zero_coords.reg"
+    outcoo=par_root_dir+"Spectra/temp_zero_coords_%s.reg"%user
     if os.path.exists(outcoo)==1:
         os.unlink(outcoo)
     f = open(outcoo, 'w')
@@ -120,7 +120,7 @@ def show2dNEW (grism,parno,obid,zeroarr,trans,zran1=-0.2,zran2=0.75):
     os.system(cmd)
     #cmd='xpaset -p ds9 zoom to fit'
     #os.system(cmd)
-    cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/temp_zero_coords.reg'
+    cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/temp_zero_coords_%s.reg'%user
     os.system(cmd)
     # MR
     if frameno=='1':
