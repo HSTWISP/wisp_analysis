@@ -179,7 +179,7 @@ def print_help_message():
 
 def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
     """ """
-    # string names for output 
+    # string names for output
     linenames = np.array(['[OII]', 'Hgamma', 'Hbeta', '[OIII]', \
                           'Halpha', '[SII]', '[SIII]', '[SIII]', 'HeI'])
     # string names for accessing fitresults
@@ -194,7 +194,7 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
     good_snr = np.where(snr_meas_array > 3)
     msg = msg + '##   Lines fit with S/N > 3:\n'
     for gsnr in good_snr[0]:
-        msg = msg + '##\t%s: Flux = %.3e    S/N = %.2f\n'%(linenames[gsnr], 
+        msg = msg + '##\t%s: Flux = %.3e    S/N = %.2f\n'%(linenames[gsnr],
                                 linefluxes[gsnr], snr_meas_array[gsnr])
 
     cfout = ['%s:%i'%(cf,contamflags[cf]) for cf in contamflags if contamflags[cf] > 0]
@@ -653,15 +653,19 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
             print "Specify contamination.\nEnter a comma-separated list of identifiers choosing from:\n  o2,hg,hb,o3,ha,s2,s31,s32,he1,c(ontinuum)"
             cf = raw_input("> ")
             cflags = [thing.strip() for thing in cf.split(',')]
+            # continuum contamination sets bit 1 for all lines and the continuum itself
             if 'c' in cflags:
-                for k,v in contamflags.iteritems():
+                for k, v in contamflags.iteritems():
                     contamflags[k] = contamflags[k] | 2
             cflaglines = [thing for thing in cflags if thing != 'c']
+            # specific line contamination sets bit 2 for all lines
             for contamflag in cflaglines:
                 try:
                     contamflags[contamflag] = contamflags[contamflag] | 4
                 except KeyError:
-                    print '%s not known. Skipping'%contamflag
+                    print '{} not known. Skipping'.format(contamflag)
+            # sqlite3 database support - automatically creates and initializes DB if required
+            databaseManager.setFlags(par, obj, [(flagName, flagValue) for flagName, flagValue in contamflags.iteritems()])
 
         # add a comment
         elif option == 'c':
@@ -673,7 +677,7 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         # set or unset one or more flags
         elif option == 'f':
             print('Enter a comma-separated list of flag, value pairs e.g. CONTAM, 1, CONTIN, 2:')
-            print('Valid flags are {}'.format(WISPLFDatabaseManager.WISPLFDatabaseManager.validFlags))
+            print('Valid flags are {}'.format(WISPLFDatabaseManager.WISPLFDatabaseManager.validMutableFlags))
             flagList = raw_input("> ")
             # sqlite3 database support - automatically creates and initializes DB if required
             databaseManager.setFlagsFromString(par, obj, flagList.decode('utf-8'))
@@ -776,9 +780,9 @@ def inspect_object(par, obj, objinfo, lamlines_found, ston_found, g102zeros, g14
         # write to file if object was accepted
         if zset == 1 :
             # write object summary
-            write_object_summary(par, obj, fitresults, snr_meas_array, 
+            write_object_summary(par, obj, fitresults, snr_meas_array,
                                  contamflags)
-        
+
             # sqlite3 database support - automatically creates and initializes DB if required
             databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
                                                                                    b_image[0], jmag[0], hmag[0], fitresults, flagcont))
@@ -888,6 +892,14 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             # starting over, no objects have been done
             os.unlink(donefile)
             objid_done = np.array([])
+
+            # sqlite3 database support - automatically creates and initializes DB if required
+            # If the field has been previously examined, but those results are to be discarded,
+            # then reset the database tables.
+            # All Par numbers in the putative line list file should be the same, so the zeroth
+            # element corresponds to the current field ID.
+            databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(parnos[0]))
+            databaseManager.resetDatabaseTables()
         else:
             # an object may be written to the comment file before it has
             # actually been inspected, so use donefile for a list
