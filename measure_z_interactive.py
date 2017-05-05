@@ -927,7 +927,10 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     # not the best way to do this, but matching the method in guis.py
     cmd = 'xpaset -p ds9 tile'
     os.system(cmd)
-    cmd = 'xpaset -p ds9 tile grid layout 2 3'
+    if show_dispersed:
+        cmd = 'xpaset -p ds9 tile grid layout 2 3'
+    else:
+        cmd = 'xpaset -p ds9 tile grid layout 2 2'
     os.system(cmd)
 
     #### STEP 1:   get linelist ###############################################
