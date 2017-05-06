@@ -902,7 +902,13 @@ def check_input_objid(objlist, objid):
     return objid
 
 
-def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=False):
+def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=False, print_colors=True):
+    # turn off color printing to terminal if required
+    if print_colors is False:
+        global setcolors
+        for k,v in setcolors.iteritems():
+            setcolors[k] = '\033[0m'
+
     #### STEP 0a:  set user name and output directory #########################
     ###########################################################################
     tmp = glob('Par*BEAM*.dat')[0]
