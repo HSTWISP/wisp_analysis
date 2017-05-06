@@ -87,6 +87,7 @@ setcolors = {'helpmsg':'\033[94m', \
              'heading':'\033[92m', \
              'accept':'\033[92m', \
              'interim':'\033[36m', \
+             'random':'\033[31m', \
              'endc':'\033[0m'}
 #######################################################################
 
@@ -1132,6 +1133,10 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             next_obj = int(re.search('\d+', o).group())
             # confirm that requested object is in line list
             next_obj = check_input_objid(objid_unique, next_obj)
+        elif o.strip().lower() == 'random':
+            print_prompt('Hi Vihang!', prompt_type='random')
+            next_obj_idx = np.random.randint(remaining_objects.shape[0])
+            next_obj = remaining_objects[next_obj_idx]
 
         # pass the information for this object
         wlinelist = np.where(objid == next_obj)
