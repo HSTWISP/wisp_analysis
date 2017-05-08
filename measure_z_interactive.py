@@ -200,6 +200,25 @@ def print_help_message():
     print(msg)
 
 
+def check_masked_lines(fitresults, spdata):
+    """ """
+    
+    fluxstrs = ['oii','hg','hb','oiii','hanii','sii','siii_9069','siii_9532','he1']
+    spec_lam = spdata[0]
+
+    z = fitresults['redshift']
+    fwhm = fitresults['fwhm_g141']
+
+    for wave,line in zip(suplines,fluxstrs):
+        waveobs = wave * (1. + z) 
+        w = (spdata[1].mask[(spec_lam >= (waveobs-fwhm)) & (spec_lam <= (waveobs+fwhm))]).any()
+        if w:
+            for dtype in ['flux', 'error', 'ew_obs']:
+                fitresults['%s_%s'%(line,dtype)] = -1.0
+    
+    return fitresults
+        
+
 def print_prompt(prompt, prompt_type='obj'):
     print(setcolors[prompt_type] + prompt + setcolors['endc'])
 
@@ -210,7 +229,7 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
     linenames = np.array(['[OII]', 'Hgamma', 'Hbeta', '[OIII]', \
                           'Halpha', '[SII]', '[SIII]', '[SIII]', 'HeI'])
     # string names for accessing fitresults
-    fluxstrs = ['oii','hg','hb','oiii','hanii','sii','siii_9069','siii_9532']
+    fluxstrs = ['oii','hg','hb','oiii','hanii','sii','siii_9069','siii_9532','he1']
     linefluxes = np.array([fitresults['%s_flux'%fs] for fs in fluxstrs])
 
     # initial message
@@ -219,6 +238,12 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
 
     # lines with S/N > 3
     good_snr = np.where(snr_meas_array > 3)
+    print 
+    print snr_meas_array
+    print
+    print contamflags
+    print linefluxes
+
     msg += '##   Lines fit with S/N > 3:\n'
     for gsnr in good_snr[0]:
         msg += '##\t%s: Flux = %.3e    S/N = %.2f\n'%(linenames[gsnr],
@@ -848,7 +873,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                     contmodel, plottitle, outdir, zset=zset)
 
         # write to file if object was accepted
-        if zset == 1 :
+        if zset == 1:
+            fitresults = check_masked_lines(fitresults, spdata)
+
             # write object summary
             write_object_summary(par, obj, fitresults, snr_meas_array,
                                  contamflags)
@@ -1229,41 +1256,41 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
         cat.write('#14 G141_FWHM_Obs  [Angs] \n')
         cat.write('#15 G141_FWHM_Obs_err  \n')
         cat.write('#16 oii_flux \n')
-        cat.write('#17 oii_error \n')
+        cat.write('#17 oii_err \n')
         cat.write('#18 oii_EW_obs \n')
         cat.write('#19 oii_contam \n')
         cat.write('#20 hg_flux \n')
         cat.write('#21 hg_err \n')
         cat.write('#22 hg_EW_obs \n')
-        cat.write('#22 hg_contam \n')
-        cat.write('#23 hb_flux \n')
-        cat.write('#24 hb_err \n')
-        cat.write('#25 hb_EW_obs \n')
-        cat.write('#26 hb_contam \n')
-        cat.write('#27 oiii_flux [both lines] \n')
-        cat.write('#28 oiii_err [both lines] \n')
-        cat.write('#29 oiii_EW_obs [both lines] \n')
-        cat.write('#30 oiii_contam [both lines] \n')
-        cat.write('#31 hanii_flux \n')
-        cat.write('#32 hanii_err \n')
-        cat.write('#33 hanii_EW_obs \n')
-        cat.write('#34 hanii_contam \n')
-        cat.write('#35 sii_flux \n')
-        cat.write('#36 sii_err \n')
-        cat.write('#37 sii_EW_obs \n')
-        cat.write('#38 sii_contam \n')
-        cat.write('#39 siii_9069_flux \n')
-        cat.write('#40 siii_9069_err \n')
-        cat.write('#41 siii_9069_EW_obs \n')
-        cat.write('#42 siii_9069_contam \n')
-        cat.write('#43 siii_9532_flux \n')
-        cat.write('#44 siii_9532_err \n')
-        cat.write('#45 siii_9532_EW_obs \n')
-        cat.write('#46 siii_9532_contam \n')
-        cat.write('#47 he1_10830_flux \n')
-        cat.write('#48 he1_10830_err \n')
-        cat.write('#49 he1_10830_EW_obs \n')
-        cat.write('#50 he1_10830_contam \n')
+        cat.write('#23 hg_contam \n')
+        cat.write('#24 hb_flux \n')
+        cat.write('#25 hb_err \n')
+        cat.write('#26 hb_EW_obs \n')
+        cat.write('#27 hb_contam \n')
+        cat.write('#28 oiii_flux [both lines] \n')
+        cat.write('#29 oiii_err [both lines] \n')
+        cat.write('#30 oiii_EW_obs [both lines] \n')
+        cat.write('#31 oiii_contam [both lines] \n')
+        cat.write('#32 hanii_flux \n')
+        cat.write('#33 hanii_err \n')
+        cat.write('#34 hanii_EW_obs \n')
+        cat.write('#35 hanii_contam \n')
+        cat.write('#36 sii_flux \n')
+        cat.write('#37 sii_err \n')
+        cat.write('#38 sii_EW_obs \n')
+        cat.write('#39 sii_contam \n')
+        cat.write('#40 siii_9069_flux \n')
+        cat.write('#41 siii_9069_err \n')
+        cat.write('#42 siii_9069_EW_obs \n')
+        cat.write('#43 siii_9069_contam \n')
+        cat.write('#44 siii_9532_flux \n')
+        cat.write('#45 siii_9532_err \n')
+        cat.write('#46 siii_9532_EW_obs \n')
+        cat.write('#47 siii_9532_contam \n')
+        cat.write('#48 he1_10830_flux \n')
+        cat.write('#49 he1_10830_err \n')
+        cat.write('#50 he1_10830_EW_obs \n')
+        cat.write('#51 he1_10830_contam \n')
 
 #        cat.write('#43 ContamFlag \n')
         cat.close()
