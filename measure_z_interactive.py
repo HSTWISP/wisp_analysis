@@ -218,7 +218,16 @@ def check_masked_lines(fitresults, snr_meas_array, spdata):
             snr_meas_array[i] = 0.0
 
     return fitresults, snr_meas_array
-        
+ 
+
+def comment_out_obj(par, obj, catalogname):
+    # if a row already exists for this object, comment it out
+    objstr = '{:<8d}'.format(par) + '{:<6d}'.format(obj)
+    for line in fileinput.input(catalogname, inplace=True):
+        if objstr in line:
+            print "#%s" % line,
+        else:
+            print '%s' % line,       
 
 def print_prompt(prompt, prompt_type='obj'):
     print(setcolors[prompt_type] + prompt + setcolors['endc'])
@@ -477,13 +486,16 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
 #    else :
 #        print('Database is empty.')
     catalogueEntryData = databaseManager.loadCatalogueEntry(parNumber=par, objectId=obj)
-    acceptPrevFit = False
+    rejectPrevFit = True
     if catalogueEntryData is not None :
         nonFitResults, fitResults = catalogueEntryData
         (par_db, obj_db, ra_db, dec_db, jmag_db, hmag_db, a_image_db, b_image_db, contamflag_db, entrytime_db) = nonFitResults
 #        print('Found previous fit results for Pointing {}, Object {}.\nEnter "y" to accept the earlier fit.'.format(par_db, obj_db))
         print('You have already fit Obj {}. Refit? [y/N]').format(obj)
-        acceptPrevFit = raw_input('> ').strip().lower() == 'n'
+        rejectPrevFit = raw_input('> ').strip().lower() == 'y'
+        if rejectPrevFit:
+            comment_out_obj(par, obj, linelistoutfile)
+        
 #        print('Accepting previous fit.' if acceptPrevFit else 'Re-fitting this object.')
 #    else :
 #        print('No previous fit results found. Fitting this object now.')
@@ -502,17 +514,18 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
 
     # print object info to screen
-    print(' ')
-    print_prompt("=" * 72)
-    print_prompt("Par%i Obj %i:" % (par, obj))
-    print_prompt("Initial redshift guess: z = %f" % (zguess))
-    print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
+    if rejectPrevFit:
+        print(' ')
+        print_prompt("=" * 72)
+        print_prompt("Par%i Obj %i:" % (par, obj))
+        print_prompt("Initial redshift guess: z = %f" % (zguess))
+        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
 
     comment = ' '
     contamflags = {'o2':0, 'hg':0, 'hb':0, 'o3':0, 'ha':0, 's2':0, 's31':0, \
                    's32':0, 'he1':0}
     # Skip if previous fit is to be accepted
-    done = 0 if not acceptPrevFit else 1
+    done = 0 if rejectPrevFit else 1
     while (done == 0):
         # sticking with the while loop to determine whether user is finished
         # with object
@@ -876,7 +889,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             print_prompt("Invalid entry.  Try again.")
 
     # only re-save data if the previous fit was discarded
-    if not acceptPrevFit :
+    if rejectPrevFit :
         # plot the whole goddamn thing
         plot_object(zguess, fitresults['redshift'],
                     spdata, config_pars, snr_meas_array, full_fitmodel,
@@ -1045,7 +1058,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     else:
         if os.path.exists(donefile):
             os.unlink(donefile)
-        objid_done = np.array([])
+        objid_done = np.array([], dtype=int)
 
     #### STEP 4: create trace.reg files ############################
     #########################################################################
@@ -1158,7 +1171,10 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             o = raw_input('> ')
 
         if o.strip().lower() == 'b':
-            previous_obj = objid_done[-1]
+            print objid_done
+            print next_obj
+            
+            previous_obj = int(objid_done[-1])
             # need to figure out what object came before this one
             #w = np.where(objid_unique == remaining_objects[0])
             # if on first object, this will roll around to previous object
@@ -1370,7 +1386,7 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
         '{:>6d}'.format(contamflags['he1']) + '\n'
         #     '   ' + '{:<6d}'.format(flagcont) + ' \n'
 
-#    """
+    """
     # if a row already exists for this object, comment it out
     objstr = '{:<8d}'.format(parnos) + '{:<6d}'.format(objid)
     for line in fileinput.input(catalogname, inplace=True):
