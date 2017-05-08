@@ -610,18 +610,27 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # change redshift guess
         elif option.strip().lower() == 'z':
             print_prompt("The current redshift guess is: %f\nEnter Redshift Guess:" % zguess)
-            zguess = float(raw_input("> "))
+            try:
+                zguess = float(raw_input("> "))
+            except ValueError:
+                print_prompt('Invalid Entry.')
 
         # change wavelength guess
         elif option.strip().lower() == 'w':
             print_prompt("The current emission line wavelength is: %f\nEnter Wavelength Guess in Angstroms:" % lamline)
-            zguess = float(raw_input("> ")) / lam_Halpha - 1.
+            try:
+                zguess = float(raw_input("> ")) / lam_Halpha - 1.
+            except ValueError:
+                print_prompt('Invalid Entry.')
 
         # change the fwhm guess
         elif option.strip().lower() == 'fw':
             print_prompt("Enter a Guess for FWHM in pixels")
             print_prompt("The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] / config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image[0]))
-            fwhm_guess = config_pars['dispersion_red'] * float(raw_input(">"))
+            try:
+                fwhm_guess = config_pars['dispersion_red'] * float(raw_input("> "))
+            except ValueError:
+                print_prompt('Invalid Entry.')
 
         # mask out 1, 2, or 3 regions of the spectrum
         elif option.strip().lower() == 'm1':
@@ -630,7 +639,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             try:
                 maskwave = [float(maskstr.split(",")[0]),
                             float(maskstr.split(",")[1])]
-            except ValueError:
+            except (IndexError,ValueError):
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region1'] = maskwave
@@ -640,7 +649,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             try:
                 maskwave = [float(maskstr.split(",")[0]),
                             float(maskstr.split(",")[1])]
-            except ValueError:
+            except (IndexError,ValueError):
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region2'] = maskwave
@@ -650,7 +659,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             try:
                 maskwave = [float(maskstr.split(",")[0]),
                             float(maskstr.split(",")[1])]
-            except ValueError:
+            except (IndexError,ValueError):
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region3'] = maskwave
@@ -1137,13 +1146,6 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         o = raw_input(
             "Enter 'obj xxx' to skip to Obj xxx or hit any key to continue. > ")
 
-        if o.strip().lower() == 'b':
-            # need to figure out what object came before this one
-            w = np.where(objid_unique == remaining_objects[0])
-            # if on first object, this will roll around to previous object
-            next_obj = objid_unique[w[0][0] - 1]
-            print_prompt("Going back to previous object: Obj %i" % (next_obj),prompt_type='interim')
-
         if o.strip().lower() == 'left':
             #remaining_list = ', '.join(['%i'%i for i in remaining_objects])
             print_prompt('Remaining objects:', prompt_type='interim')
@@ -1155,18 +1157,31 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             print allobjects
             o = raw_input('> ')
 
-        if o.strip().lower() == 'q':
+        if o.strip().lower() == 'b':
+            previous_obj = objid_done[-1]
+            # need to figure out what object came before this one
+            #w = np.where(objid_unique == remaining_objects[0])
+            # if on first object, this will roll around to previous object
+            next_obj = previous_obj
+            print_prompt("Going back to previous object: Obj %i" % (next_obj),prompt_type='interim')
+
+        elif o.strip().lower() == 'q':
             print_prompt("Quitting; saved through previously completed object.",prompt_type='interim')
             return 0
 
-        elif 'obj' in o:
-            next_obj = int(re.search('\d+', o).group())
-            # confirm that requested object is in line list
-            next_obj = check_input_objid(objid_unique, next_obj)
         elif o.strip().lower() == 'random':
             print_prompt('Hi Vihang!', prompt_type='random')
             next_obj_idx = np.random.randint(remaining_objects.shape[0])
             next_obj = remaining_objects[next_obj_idx]
+
+        elif isFloat(o.strip()):
+            next_obj = int(re.search('\d+', o).group())
+            # confirm that requested object is in line list
+            next_obj = check_input_objid(objid_unique, next_obj)
+        elif 'obj' in o:
+            next_obj = int(re.search('\d+', o).group())
+            # confirm that requested object is in line list
+            next_obj = check_input_objid(objid_unique, next_obj)
 
         # pass the information for this object
         wlinelist = np.where(objid == next_obj)
@@ -1189,7 +1204,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         if redo != 'q':
             try:
                 next_obj = int(re.search('\d+', redo).group())
-            except ValueError,AttributeError:
+            except (ValueError,AttributeError):
                 print_prompt("Invalid entry. Enter an object ID or enter 'q' to quit", prompt_type='interim')
             else:
                 next_obj = check_input_objid(objid_unique, next_obj)
