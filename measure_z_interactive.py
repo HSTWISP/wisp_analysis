@@ -462,7 +462,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # Data have been successfully loaded for this object. If it has been inspected
     # previously, the original results will have been stored in the SQLLite database
     # and a retrieval obtion should be offered.
-    databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(par))
+#    databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(par))
+    databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(par)))
     mostRecentObjectData = databaseManager.getMostRecentObject()
 #    if mostRecentObjectData is not None :
 #        print('Most recent object in database: Par {}, Obj {}, Date {}'.format(*mostRecentObjectData))
