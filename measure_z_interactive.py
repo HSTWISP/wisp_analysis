@@ -909,25 +909,6 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         for k,v in setcolors.iteritems():
             setcolors[k] = '\033[0m'
 
-    #### STEP 0a:  set user name and output directory #########################
-    ###########################################################################
-    tmp = glob('Par*BEAM*.dat')[0]
-    par = tmp.split('_')[0]
-    print_prompt('You are about to inspect emission lines identified in {}'.format(par), prompt_type='interim')
-    print_prompt('Please enter your name or desired username', prompt_type='interim')
-    while True:
-        user = raw_input('> ')
-        if len(user) == 0:
-            print_prompt('Username required', prompt_type='interim')
-            continue
-        else:
-            break
-    user = user.strip().lower()
-    # create output directory
-    outdir = '%s_output_%s'%(par,user)
-    if not os.path.isdir(outdir):
-        os.mkdir(outdir)
-
     #### STEP 0:   set ds9 window to tile mode ################################
     ###########################################################################
     # not the best way to do this, but matching the method in guis.py
@@ -954,6 +935,26 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         return 0
     else:
         print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
+
+    #### STEP 1b:  set user name and output directory #########################
+    ###########################################################################
+    tmp = glob('Par*BEAM*.dat')[0]
+    par = tmp.split('_')[0]
+    print_prompt('You are about to inspect emission lines identified in {}'.format(par), prompt_type='interim')
+    print_prompt('Please enter your name or desired username', prompt_type='interim')
+    while True:
+        user = raw_input('> ')
+        if len(user) == 0:
+            print_prompt('Username required', prompt_type='interim')
+            continue
+        else:
+            break
+    user = user.strip().lower()
+    # create output directory
+    outdir = '%s_output_%s'%(par,user)
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
+
 
     #### STEP 2:   read the list of candidate lines  ####################
     ###########################################################################
