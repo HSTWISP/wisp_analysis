@@ -839,13 +839,12 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         else:
             print_prompt("Invalid entry.  Try again.")
 
-        # print "OK"
+        # plot the whole goddamn thing
+        plot_object(zguess, fitresults['redshift'],
+                    spdata, config_pars, snr_meas_array, full_fitmodel,
+                    full_contmodel, lamlines_found, index_of_strongest_line, 
+                    contmodel, plottitle, outdir, zset=zset)
 
-    # plot the whole goddamn thing
-    plot_object(zguess, fitresults['redshift'],
-                spdata, config_pars, snr_meas_array, full_fitmodel,
-                full_contmodel, lamlines_found, index_of_strongest_line, 
-                contmodel, plottitle, outdir, zset=zset)
     # only re-save data if the previous fit was discarded
     if not acceptPrevFit :
         # write to file if object was accepted
