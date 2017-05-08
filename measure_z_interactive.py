@@ -305,6 +305,12 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
             # use data coordinates for x-axis and axes coords for y-axis
             ax1.text(li, 0.85, stringplot, rotation='vertical',
                      ha='right', fontsize='16', transform=ax1trans)
+    # add just the line for [OIII]4959
+    lamobs_o32 = (1 + zguess) * np.array([lam_Oiii_1])
+    if (lamobs_o32 > xmin + 100) & (lamobs_o32 < xmax - 100):
+        for ax in [ax1, ax2]:
+            ax.axvline(x=lamobs_o32, color='b')
+
 
     ax1.plot(spec_lam, full_fitmodel, color='r', lw=1.5)
     ax1.plot(spec_lam, full_contmodel, color='b', linestyle='--', lw=1.5)
@@ -1183,7 +1189,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         if redo != 'q':
             try:
                 next_obj = int(re.search('\d+', redo).group())
-            except ValueError:
+            except ValueError,AttributeError:
                 print_prompt("Invalid entry. Enter an object ID or enter 'q' to quit", prompt_type='interim')
             else:
                 next_obj = check_input_objid(objid_unique, next_obj)
