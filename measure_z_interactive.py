@@ -200,7 +200,7 @@ def print_help_message():
     print(msg)
 
 
-def check_masked_lines(fitresults, spdata):
+def check_masked_lines(fitresults, snr_meas_array, spdata):
     """ """
     fluxstrs = ['oii','hg','hb','oiii','hanii','sii','siii_9069','siii_9532','he1']
 
@@ -209,14 +209,15 @@ def check_masked_lines(fitresults, spdata):
     z = fitresults['redshift']
     fwhm = fitresults['fwhm_g141']
 
-    for wave,line in zip(suplines,fluxstrs):
+    for i,(wave,line) in enumerate(zip(suplines,fluxstrs)):
         waveobs = wave * (1. + z) 
         w = (spdata[1].mask[(spec_lam >= (waveobs-fwhm)) & (spec_lam <= (waveobs+fwhm))]).any()
         if w:
             for dtype in ['flux', 'error', 'ew_obs']:
                 fitresults['%s_%s'%(line,dtype)] = -1.0
-    
-    return fitresults
+            snr_meas_array[i] = 0.0
+
+    return fitresults, snr_meas_array
         
 
 def print_prompt(prompt, prompt_type='obj'):
@@ -870,7 +871,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # write to file if object was accepted
         if zset == 1:
             if np.any(spdata[1].mask):
-                fitresults = check_masked_lines(fitresults, spdata)
+                fitresults, snr_meas_array = check_masked_lines(fitresults, snr_meas_array, spdata)
 
             # write object summary
             write_object_summary(par, obj, fitresults, snr_meas_array,
