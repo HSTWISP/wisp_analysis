@@ -202,8 +202,8 @@ def print_help_message():
 
 def check_masked_lines(fitresults, spdata):
     """ """
-    
     fluxstrs = ['oii','hg','hb','oiii','hanii','sii','siii_9069','siii_9532','he1']
+
     spec_lam = spdata[0]
 
     z = fitresults['redshift']
@@ -238,12 +238,6 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
 
     # lines with S/N > 3
     good_snr = np.where(snr_meas_array > 3)
-    print 
-    print snr_meas_array
-    print
-    print contamflags
-    print linefluxes
-
     msg += '##   Lines fit with S/N > 3:\n'
     for gsnr in good_snr[0]:
         msg += '##\t%s: Flux = %.3e    S/N = %.2f\n'%(linenames[gsnr],
@@ -874,7 +868,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
 
         # write to file if object was accepted
         if zset == 1:
-            fitresults = check_masked_lines(fitresults, spdata)
+            if np.any(spdata[1].mask):
+                fitresults = check_masked_lines(fitresults, spdata)
 
             # write object summary
             write_object_summary(par, obj, fitresults, snr_meas_array,
@@ -1181,13 +1176,13 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     # outside the while loop, field is done
     redo = ' '
     while redo != 'q':
-        print "You've finished this field.\nEnter an object ID below to revisit a particular object.\nOtherwise enter 'q' to quit the field."
+        print_prompt("You've finished this field.\nEnter an object ID below to revisit a particular object.\nOtherwise enter 'q' to quit the field.", prompt_type='interim')
         redo = raw_input("> ").strip().lower()
         if redo != 'q':
             try:
                 next_obj = int(re.search('\d+', redo).group())
             except ValueError:
-                print "Invalid entry. Enter an object ID or enter 'q' to quit"
+                print_prompt("Invalid entry. Enter an object ID or enter 'q' to quit", prompt_type='interim')
             else:
                 next_obj = check_input_objid(objid_unique, next_obj)
                 # pass the information for this object
