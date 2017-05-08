@@ -1048,7 +1048,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             # then reset the database tables.
             # All Par numbers in the putative line list file should be the same, so the zeroth
             # element corresponds to the current field ID.
-            databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(parnos[0]))
+            databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(parnos[0])))
             databaseManager.resetDatabaseTables()
         else:
             # an object may be written to the comment file before it has
