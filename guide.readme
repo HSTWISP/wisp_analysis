@@ -1,0 +1,114 @@
+##############################################################################
+While inspecting an object, the available options are:
+
+    OBJECT SPECIFIC OPTIONS:
+    a = accept object fit
+    ac = accept object fit, noting contamination
+    r = reject object
+    c = add comment
+    contam = specify contamination to line flux and/or continuum
+    reset = reset interactive options back to default for this object
+
+    EMISSION LINE SPECIFIC OPTIONS:
+    z = enter a different z guess
+    w = enter a different emission line wavelength guess
+    ha,  or hb, o31, o32, o2, s2, s31, s32 = change redshift guess
+    n = skip to next brightest line found in this object
+
+    SPECTRUM SPECIFIC OPTIONS:
+    fw = change the fwhm guess in pixels
+    t = change transition wavelength
+    m1, m2, or m3 = mask up to three discontinuous wavelength regions
+    nodes = change the wavelengths for the continuum spline nodes
+    bluecut = change the blue cutoff of the G102 spec
+    redcut  = change the red cutoff of the G141 spec
+
+    DS9 SPECIFIC OPTIONS:
+    lin = linear z-scale
+    log = logarithmic
+    zs102 = z1,z2 comma-separated range for G102 zscale
+    zs141 = z1,z2 comma-separated range for G141 zscale
+    dc = recenter direct images
+    reload = reload direct images
+    dr = reload direct image reg files
+
+    SOFTWARE SPECIFIC OPTIONS: 
+    h = print this message
+    q = quit
+
+
+##############################################################################
+User checklist:
+
+For each object, make sure to carefully inspect all available information:
+    - 1D spectrum (matplotlib window)
+    - 2D stamps (top row in ds9)
+    - direct images (middle row in ds9)
+    
+While working on an object, consider the following guidelines:
+
+- Look at the direct images. Is the source a real galaxy?
+    Make sure it is not a star or spurious source detected along a 
+    diffraction spike, hot/bad pixel or other artifact.
+
+- Is the line real? Make sure it is not:
+    - a bright (major, red band) zeroth order 
+    - off-center from the trace (WCS in 2D stamp significantly off from zero)
+    - a hot/bad pixel, cosmic ray, diffraction spike, or other artifact
+
+- Make sure the emission line shape in 2D stamp is consistent with 
+  the source's shape
+
+- Does the wavelength of the emission line in the 1D spectrum matches 
+  the wavelength in the 2D stamp? Or does it match a source of contamination?
+
+- If there is only one line, assume it is Halpha unless you see asymmetry 
+  indicating Hbeta/[OIII].
+
+- Check for contamination. Likely sources of contamination are:
+    - 
+
+- If there are multiple emission lines, the wavelengths should match. 
+    If you cannot find a redshift that accounts for all lines, could 
+    the lines be from a different source?
+
+- Line ratio sanity check:
+    - Ha should be stronger than [SII]
+    - [OIII] should almost always be stronger than Hbeta
+
+- Is the line fit properly in the 1D spectrum (red curve)? If not, consider:
+    - changing the nodes to get a better continuum fit;
+    - masking out highly contaminated regions of the spectrum;
+    - changing the blue (red) cutoff wavelength of G102 (G141);
+    - changing the transition wavelength between the grisms 
+        (especially useful if an emission line is right on the edge)
+ 
+- If the 'current' emission line (red circle) is not believable, you can 
+  try the 'n' option to move to the next strongest emission line identified 
+  in the spectrum.
+
+
+
+##############################################################################
+Matplotlib Window
+
+TOP ROW - The following describes the elements plotted in the top row. 
+    - Black curve (step function): object's spectrum
+    - Blue dashed curve: continuum model
+    - Red curve: full model (continuum + Gaussian emission lines)
+    - Blue vertical lines: expected location of emission lines given the 
+      current redshift guess for the object. Lines are labeled and the S/N 
+      of the emission line fit is printed in parentheses. The current list of 
+      lines is [OII]3727, Hgamma, Heta, [OIII]4959, [OIII]5007, Halpha, 
+      [SII]6716,6730, [SIII]9069, [SIII]9532, HeI.
+    - Blue circles: locations of all emission line candidates detected 
+      for this object
+    - Red circle: the 'current' emission line candidate that you will use to 
+      set the redshift for the object. If multiple lines are detected, the one
+      with the strongest preliminary S/N is chosen and assumed to be Hα.
+    - Black circles - spline nodes used to fit the continuum.
+Cyan dotted vertical line - the transition wavelength between the two grisms.
+Red vertical shaded bands (not present in this example) - the locations in wavelength space of 0th order contaminants. These bands indicate 0th orders that overlap the object's spectral trace and belong to bright objects (magnitude < 23.5). These portions of the spectrum are masked and not considered in the fitting.
+Orange vertical shaded bands (not present in this example) - the locations in wavelength space of possible 0th order contaminants. These bands indicate 0th orders that overlap the object's spectral trace but belong to fainter objects (magnitude > 23.5).
+Grey vertical shaded bands (not present in this example) - any regions of the spectrum you have masked out (see Interactive Fitter).
+BOTTOM ROW - We focus mainly on the top row, but the bottom plot is useful to see the S/N of emission line candidates relative to the threshold (red horizontal line).
