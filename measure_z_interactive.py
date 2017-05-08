@@ -286,7 +286,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     masked_spec_lam = np.ma.masked_where(np.ma.getmask(spec_val), spec_lam)
 
     plt.ion()
-    fig = plt.figure(1, figsize=(11, 8))
+    fig = plt.figure(1, figsize=(11, 8), dpi=75)
     plt.clf()
     gs = gridspec.GridSpec(3, 4)
     ax1 = fig.add_subplot(gs[0:2, :])
