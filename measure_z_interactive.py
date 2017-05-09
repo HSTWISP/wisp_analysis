@@ -211,7 +211,7 @@ def check_masked_lines(fitresults, snr_meas_array, spdata):
 
     for i,(wave,line) in enumerate(zip(suplines,fluxstrs)):
         waveobs = wave * (1. + z) 
-        w = (spdata[1].mask[(spec_lam >= (waveobs-fwhm)) & (spec_lam <= (waveobs+fwhm))]).any()
+        w = (spdata[1].mask[(spec_lam >= (waveobs-fwhm/2.)) & (spec_lam <= (waveobs+fwhm/2.))]).any()
         if w:
             for dtype in ['flux', 'error', 'ew_obs']:
                 fitresults['%s_%s'%(line,dtype)] = -1.0
