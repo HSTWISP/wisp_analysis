@@ -8,6 +8,7 @@ While inspecting an object, the available options are:
     c = add comment
     contam = specify contamination to line flux and/or continuum
     reset = reset interactive options back to default for this object
+    s = print the (in progress) object summary
 
     EMISSION LINE SPECIFIC OPTIONS:
     z = enter a different z guess

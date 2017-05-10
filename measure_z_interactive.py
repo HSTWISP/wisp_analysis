@@ -86,6 +86,7 @@ setcolors = {'helpmsg':'\033[94m', \
              'obj':'\033[95m', \
              'heading':'\033[92m', \
              'accept':'\033[92m', \
+             'working':'\033[0m', \
              'interim':'\033[36m', \
              'random':'\033[31m', \
              'endc':'\033[0m'}
@@ -172,7 +173,8 @@ def print_help_message():
         "\tr = reject object\n" \
         "\tc = add comment\n" \
         "\tcontam = specify contamination to line flux and/or continuum\n" \
-        "\treset = reset interactive options back to default for this object\n\n"
+        "\treset = reset interactive options back to default for this object\n" \
+        "\ts = print the (in progress) object summary\n\n"
     msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n"
     msg += setcolors['helpmsg'] + "\tz = enter a different z guess\n" \
         "\tw = enter a different emission line wavelength guess\n" \
@@ -233,7 +235,7 @@ def print_prompt(prompt, prompt_type='obj'):
     print(setcolors[prompt_type] + prompt + setcolors['endc'])
 
 
-def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
+def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags, summary_type='accept'):
     """ """
     # string names for output
     linenames = np.array(['[OII]', 'Hgamma', 'Hbeta', '[OIII]', \
@@ -243,7 +245,7 @@ def write_object_summary(par, obj, fitresults, snr_meas_array, contamflags):
     linefluxes = np.array([fitresults['%s_flux'%fs] for fs in fluxstrs])
 
     # initial message
-    msg = setcolors['accept'] + '#'*72
+    msg = setcolors[summary_type] + '#'*72
     msg += '\n## Par{} Obj {}:\n##   Fit Redshift: z = {:.4f}\n'.format(par, obj, fitresults['redshift'])
 
     # lines with S/N > 3
@@ -631,10 +633,15 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # change wavelength guess
         elif option.strip().lower() == 'w':
             print_prompt("The current emission line wavelength is: %f\nEnter Wavelength Guess in Angstroms:" % lamline)
+            # save previous line guess (if not Ha)
+            old_rest_wave = lamline / (1. + zguess)
             try:
-                zguess = float(raw_input("> ")) / lam_Halpha - 1.
+                newwave = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid Entry.')
+            else:
+                zguess = newwave / old_rest_wave - 1.
+                lamline = newwave
 
         # change the fwhm guess
         elif option.strip().lower() == 'fw':
@@ -796,6 +803,11 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             flagList = raw_input("> ")
             # sqlite3 database support - automatically creates and initializes DB if required
             databaseManager.setFlagsFromString(par, obj, flagList.decode('utf-8'))
+
+        # write object summary
+        elif option.strip().lower() == 's':
+            write_object_summary(par, obj, fitresults, snr_meas_array,
+                                 contamflags, summary_type='working')
 
         # print help message
         elif option.strip().lower() == 'h':
@@ -1149,7 +1161,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n', prompt_type='interim')
 
     while remaining_objects.shape[0] > 0:
-        ndone = len(objid_done)
+        ndone = len(np.unique(objid_done))
         progress = float(ndone) / float(len(objid_unique)) * 100.
         print_prompt("\nProgress: %.1f percent" % (progress),prompt_type='interim')
 
@@ -1171,9 +1183,6 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             o = raw_input('> ')
 
         if o.strip().lower() == 'b':
-            print objid_done
-            print next_obj
-            
             previous_obj = int(objid_done[-1])
             # need to figure out what object came before this one
             #w = np.where(objid_unique == remaining_objects[0])
