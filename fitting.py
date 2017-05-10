@@ -606,9 +606,15 @@ def fit_obj(input_list):
         parinfo2[1]['fixed'] = 1   # fit_region
         parinfo2[2]['fixed'] = 1   # transition_wave
         parinfo2[3]['fixed'] = 0   # z_in
-        parinfo2[4]['fixed'] = 0   # dz 
-        parinfo2[5]['fixed'] = 0   # dz 
-        parinfo2[6]['fixed'] = 0
+        if z_in > 1.55:
+            parinfo2[4]['fixed'] = 1   # fix dz_oiii
+        else:
+            parinfo2[4]['fixed'] = 0   # vary dz_oiii 
+        if z_in > 2.4:
+            parinfo2[5]['fixed'] = 1   # fix dz_oii 
+        else:
+            parinfo2[5]['fixed'] = 0   # vary dz_oii 
+        parinfo2[6]['fixed'] = 1   # always fix dz_siii
         
         parinfo2[7]['fixed'] = 1   ### blue to red fwhm ratio.  fixed at 0.5
         parinfo2[7]['value'] = 0.5
@@ -633,7 +639,7 @@ def fit_obj(input_list):
        ###z 
         parinfo2[3]['limited'][0] = 1 
         parinfo2[3]['limited'][1] = 1 
-        parinfo2[3]['limits'][0] = z_in - dz 
+        parinfo2[3]['limits'][0] = z_in - dz
         parinfo2[3]['limits'][1] = z_in + dz 
         
         #dz_oiii 
@@ -713,10 +719,12 @@ def fit_obj(input_list):
  
         pguess2 = [] 
         for i in range(npars): pguess2.append(parinfo2[i]['value'])  
-        
+
+#        print 
+#        print parinfo2        
+
         out = mpfit(model_resid, pguess2, functkw=fa2, parinfo = parinfo2, quiet=True)  
         chisq  = out.fnorm / (len(w[0]) - npars)  
-        
 
     ### evaluate continuum spline. 
         modelpars_nolines = cp.deepcopy(out.params) 
@@ -997,8 +1005,6 @@ def fit_obj(input_list):
 
 
 
-
-
         fit_results = {} 
         fit_results['redshift'] = out.params[3] 
         fit_results['redshift_err'] = out.perror[3]  
@@ -1044,7 +1050,6 @@ def fit_obj(input_list):
         fit_results = {} 
         fit_results['fit_status'] = out.status 
 
-     
     #return [out.params[0], out.params[1], ha_flux*scl, ha_err *scl, ha_ew_obs,  oiii_flux*scl, oiii_err * scl,  oiii_ew_obs, chisq, out.status, scl,  out.params]
     return fit_results
 

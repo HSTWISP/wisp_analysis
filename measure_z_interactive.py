@@ -546,8 +546,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # apply the mask to the wavelength array
         masked_spec_lam = np.ma.masked_where(np.ma.getmask(spec_val), spec_lam)
         # compress the masked arrays for fitting
-        fit_inputs = [np.ma.compressed(masked_spec_lam), np.ma.compressed(
-            spec_val), np.ma.compressed(spec_unc), config_pars, zguess, fwhm_guess, str(obj)]
+        fit_inputs = [np.ma.compressed(masked_spec_lam), np.ma.compressed(spec_val), np.ma.compressed(spec_unc), config_pars, zguess, fwhm_guess, str(obj)]
         # parsing the input to facilitate parallel processing when fitting
         # is done in batch mode.
         fitresults = fit_obj(fit_inputs)
