@@ -225,11 +225,12 @@ def check_masked_lines(fitresults, snr_meas_array, spdata):
 def comment_out_obj(par, obj, catalogname):
     # if a row already exists for this object, comment it out
     objstr = '{:<8d}'.format(par) + '{:<6d}'.format(obj)
-    for line in fileinput.input(catalogname, inplace=True):
-        if objstr in line:
-            print "#%s" % line,
-        else:
-            print '%s' % line,       
+    if os.path.exists(catalogname):
+        for line in fileinput.input(catalogname, inplace=True):
+            if objstr in line:
+                print "#%s" % line,
+            else:
+                print '%s' % line,       
 
 def print_prompt(prompt, prompt_type='obj'):
     print(setcolors[prompt_type] + prompt + setcolors['endc'])
@@ -269,7 +270,7 @@ def make_tarfile(outdir):
         tar.add(outdir, arcname=os.path.basename(outdir))
 
 
-def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel, full_contmodel, lamlines_found, index_of_strongest_line, contmodel, plottitle,outdir, zset=None):
+def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel, full_contmodel, current_lam, lamlines_found, index_of_strongest_line, contmodel, plottitle,outdir, zset=None):
     """
     # save the figure for everything, junk objects and all
     # previous figures are overwritten
@@ -384,7 +385,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     ax1.plot(lf_lam, lf_cont, 'bo', ms=9)
 
     # indicate "current" line
-    current_lam = lamlines_found[index_of_strongest_line]
+#    current_lam = lamlines_found[index_of_strongest_line]
     current_cont = contmodel[
         np.argmin(np.abs(np.ma.compressed(masked_spec_lam) - current_lam))]
     ax1.plot(current_lam, current_cont, 'ro', ms=10)
@@ -591,8 +592,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # plot the whole goddamn thing
         plot_object(zguess, fitresults['redshift'], 
                     spdata, config_pars, snr_meas_array, full_fitmodel,
-                    full_contmodel, lamlines_found, index_of_strongest_line, 
-                    contmodel, plottitle, outdir)
+                    full_contmodel, lamline, lamlines_found, 
+                    index_of_strongest_line, contmodel, plottitle, outdir)
 #        print "    Guess Redshift: z = %f" % (zguess)
         print_prompt("    Fit Redshift:   z = %f\n" % (zfit))
         # input
@@ -904,8 +905,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # plot the whole goddamn thing
         plot_object(zguess, fitresults['redshift'],
                     spdata, config_pars, snr_meas_array, full_fitmodel,
-                    full_contmodel, lamlines_found, index_of_strongest_line, 
-                    contmodel, plottitle, outdir, zset=zset)
+                    full_contmodel, lamline, lamlines_found, 
+                    index_of_strongest_line, contmodel, plottitle, 
+                    outdir, zset=zset)
 
         # write to file if object was accepted
         if zset == 1:
@@ -954,14 +956,22 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         f.close()
 
 
-def check_input_objid(objlist, objid):
+def check_input_objid(objlist, objid, nextup):
     """ """
     fulllist = ', '.join(['%i' % o for o in objlist])
-    if objid not in objlist:
-        print_prompt('Obj %i is not in the line list'%(objid), prompt_type='interim')
-        print_prompt('Full line list: \n%s'%(fulllist), prompt_type='interim')
-        o = raw_input('Please try again: > ')
-        objid = int(re.search('\d+', o).group())
+    print_prompt('Obj %i is not in the line list'%(objid), 
+                 prompt_type='interim')
+    print_prompt('Full line list: \n%s'%(fulllist), prompt_type='interim')
+    while objid not in objlist:
+        o = raw_input('Please try again, or hit enter to continue with Obj %s: > '%nextup)
+        if o.strip().lower() == 'q':
+            return False
+        elif isFloat(o.strip()):
+            objid = int(o)
+        elif 'obj' in o:
+            objid = int(re.search('\d+', o).group())
+        elif o.strip() == '':
+            return False
     return objid
 
 
@@ -1168,8 +1178,9 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         next_obj = remaining_objects[0]
         print_prompt('Next up: Obj %i' % (next_obj),prompt_type='interim')
         o = raw_input(
-            "Enter 'obj xxx' to skip to Obj xxx or hit any key to continue. > ")
+            "Enter 'xxx' to skip to Obj xxx or hit any key to continue. > ")
 
+        
         if o.strip().lower() == 'left':
             #remaining_list = ', '.join(['%i'%i for i in remaining_objects])
             print_prompt('Remaining objects:', prompt_type='interim')
@@ -1201,12 +1212,15 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         elif isFloat(o.strip()):
             next_obj = int(re.search('\d+', o).group())
             # confirm that requested object is in line list
-            next_obj = check_input_objid(objid_unique, next_obj)
+            next_obj = check_input_objid(objid_unique, next_obj, remaining_objects[0])
+            next_obj = next_obj if next_obj else remaining_objects[0]
         elif 'obj' in o:
             next_obj = int(re.search('\d+', o).group())
             # confirm that requested object is in line list
-            next_obj = check_input_objid(objid_unique, next_obj)
+            next_obj = check_input_objid(objid_unique, next_obj, remaining_objects[0])
+            next_obj = next_obj if next_obj else remaining_objects[0]
 
+        
         # pass the information for this object
         wlinelist = np.where(objid == next_obj)
         lamlines_found = wavelen[wlinelist]
