@@ -1,3 +1,4 @@
+from glob import glob
 from wisp_analysis import *
 import pdb
 #import os
@@ -207,23 +208,41 @@ def loop_field_cwt():
     if os.path.exists('linelist') == False: 
         os.mkdir('linelist') 
 
-    os.system('ls *G102_BEAM_*A.dat > linelist/g102_spec.list')
-    os.system('ls *G141_BEAM_*A.dat > linelist/g141_spec.list')
-    
+    g102files = glob('*G102_BEAM_*A.dat')
+    g102files.sort()
+    g141files = glob('*G141_BEAM_*A.dat')
+    g141files.sort()
 
+###    os.system('ls *G102_BEAM_*A.dat > linelist/g102_spec.list')
+###    os.system('ls *G141_BEAM_*A.dat > linelist/g141_spec.list')
+    
     config_pars = read_config('default.config')
 
-    g102list = asciitable.read('linelist/g102_spec.list', format = 'no_header') 
-    g102files = g102list['col1']
-    g141list = asciitable.read('linelist/g141_spec.list', format = 'no_header')
-    g141files = g141list['col1']
+###    g102list = asciitable.read('linelist/g102_spec.list', format = 'no_header') 
+###    g102files = g102list['col1']
+###    g141list = asciitable.read('linelist/g141_spec.list', format = 'no_header')
+###    g141files = g141list['col1']
     ### the sizes of the sources are used as a rough estimate 
-    blue_se = asciitable.read('../DATA/DIRECT_GRISM/fin_F110.cat') 
-    red_se  = asciitable.read('../DATA/DIRECT_GRISM/fin_F160.cat') 
+    ### these are the same in all filters in pixel coordinates
+    ### so remove the necessity for both filters
+    
+    # get list of available catalogs
+    catalogs = glob('../DATA/DIRECT_GRISM/fin_F*cat')
+    catalogs.sort()
+    # the "blue" catalog will be the first filter
+    cat = asciitable.read(catalogs[0])
+    if len(catalogs) > 1:
+        cat2 = asciitable.read(catalogs[1])
+    # a_image is the same in both catalogs
+    a_images = cat['col5']
+    beam_se = cat['col2']
 
-    a_image_blue = blue_se['col5'] 
-    a_image_red = red_se['col5']
-    beam_se = blue_se['col2']    #### doesn't matter if it comes from red/blue because these cats are matched. 
+###    blue_se = asciitable.read('../DATA/DIRECT_GRISM/fin_F110.cat') 
+###    red_se  = asciitable.read('../DATA/DIRECT_GRISM/fin_F160.cat') 
+###
+###    a_image_blue = blue_se['col5'] 
+###    a_image_red = red_se['col5']
+###    beam_se = blue_se['col2']    #### doesn't matter if it comes from red/blue because these cats are matched. 
     
     outfile = open('linelist/temp', 'w') 
     config_pars['transition_wave'] = 11700.
@@ -239,7 +258,8 @@ def loop_field_cwt():
 
         w=np.where(beam_se == beam) 
         w=w[0]    # because of the stupid tuple thing
-        a_image = a_image_blue[w][0]
+###        a_image = a_image_blue[w][0]
+        a_image = a_images[w][0]
         fwhm_est_pix = a_image * 2
 
         
@@ -280,8 +300,6 @@ def loop_field_cwt():
         config_pars['transition_wave'] = 11700.
 
 
-
-
     config_pars['transition_wave'] = 11100.
     for filename in g141files:
         #filename = 'Spectra/Par302_G141_BEAM_1A.dat'
@@ -291,7 +309,8 @@ def loop_field_cwt():
         parno = filename.split('Par')[1].split('_')[0]
         w=np.where(beam_se == beam) 
         w=w[0]    # because of the stupid tuple thing
-        a_image = a_image_red[w][0]  
+###        a_image = a_image_red[w][0]  
+        a_image = a_images[w][0]  
         lam = trimmed_spec[0] 
         flux_corr = trimmed_spec[1] - trimmed_spec[3] 
         err = trimmed_spec[2] 
