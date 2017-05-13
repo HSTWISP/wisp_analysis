@@ -85,8 +85,10 @@ def find_cwt(lam, flux, err, zeros, fwhm_est_pix, beam_name, config_pars, plotfl
         zero_check = [] 
         mef102 = mef = '../G102_DRIZZLE/aXeWFC3_G102_mef_ID'+beam_name + '.fits'
         mef141 = mef = '../G141_DRIZZLE/aXeWFC3_G141_mef_ID'+beam_name + '.fits' 
-        hdu102 = fits.open(mef102)
-        hdu141 = fits.open(mef141)
+        if os.path.exists(mef102):
+            hdu102 = fits.open(mef102)
+        if os.path.exists(mef141):
+            hdu141 = fits.open(mef141)
 
         for pk in peaks: 
             
@@ -114,8 +116,11 @@ def find_cwt(lam, flux, err, zeros, fwhm_est_pix, beam_name, config_pars, plotfl
                 zero_check.append(True) 
         zero_check = np.array(zero_check) 
         peaks = peaks[zero_check] 
-        hdu102.close()
-        hdu141.close()
+
+        if os.path.exists(mef102):
+            hdu102.close()
+        if os.path.exists(mef141):
+            hdu141.close()
 
 
 
