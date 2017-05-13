@@ -959,11 +959,15 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
 def check_input_objid(objlist, objid, nextup):
     """ """
     fulllist = ', '.join(['%i' % o for o in objlist])
-    print_prompt('Obj %i is not in the line list'%(objid), 
-                 prompt_type='interim')
-    print_prompt('Full line list: \n%s'%(fulllist), prompt_type='interim')
+    if objid not in objlist:
+        print_prompt('Obj %i is not in the line list'%(objid), 
+                     prompt_type='interim')
+        print_prompt('Full line list: \n%s'%(fulllist), prompt_type='interim')
     while objid not in objlist:
-        o = raw_input('Please try again, or hit enter to continue with Obj %s: > '%nextup)
+        if nextup == 0:
+            o = raw_input("Please try again, or hit enter or 'q' to quit. > ")
+        else:
+            o = raw_input('Please try again, or hit enter to continue with Obj %s: > '%nextup)
         if o.strip().lower() == 'q':
             return False
         elif isFloat(o.strip()):
@@ -1245,18 +1249,21 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             except (ValueError,AttributeError):
                 print_prompt("Invalid entry. Enter an object ID or enter 'q' to quit", prompt_type='interim')
             else:
-                next_obj = check_input_objid(objid_unique, next_obj)
-                # pass the information for this object
-                wlinelist = np.where(objid == next_obj)
-                lamlines_found = wavelen[wlinelist]
-                ston_found = ston[wlinelist]
-                wcatalog = np.where(objtable['obj'] == next_obj)
-                objinfo = objtable[wcatalog]
-                inspect_object(user, parnos[0], next_obj, objinfo, 
-                               lamlines_found, ston_found, g102zeroarr, 
-                               g141zeroarr, linelistoutfile, commentsfile, 
-                               remaining_objects, allobjects, 
-                               show_dispersed=show_dispersed)
+                next_obj = check_input_objid(objid_unique, next_obj, 0)
+                if next_obj:
+                    # pass the information for this object
+                    wlinelist = np.where(objid == next_obj)
+                    lamlines_found = wavelen[wlinelist]
+                    ston_found = ston[wlinelist]
+                    wcatalog = np.where(objtable['obj'] == next_obj)
+                    objinfo = objtable[wcatalog]
+                    inspect_object(user, parnos[0], next_obj, objinfo, 
+                                   lamlines_found, ston_found, g102zeroarr, 
+                                   g141zeroarr, linelistoutfile, commentsfile, 
+                                   remaining_objects, allobjects, 
+                                   show_dispersed=show_dispersed)
+                else:
+                    break
 
     make_tarfile(outdir)
     print_prompt('A tarfile of your outputs has been created: %s.tar.gz'%outdir, prompt_type='interim')
