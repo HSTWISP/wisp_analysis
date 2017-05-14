@@ -240,8 +240,6 @@ def showDispersed(obid,load_image=False):  # MB
                 x102 = float(linesplit[1].split(',')[0])
                 y102 = float(linesplit[2].split(',')[0])
         reg102.close()
-    else:
-        return 0
     if os.path.exists(path141_1reg)==1:
         reg141=open(path141_1reg,'r')
         x141,y141=-1,-1
@@ -252,8 +250,6 @@ def showDispersed(obid,load_image=False):  # MB
                 x141 = float(linesplit[1].split(',')[0])
                 y141 = float(linesplit[2].split(',')[0])
         reg141.close()
-    else:
-        return 0
     
     if load_image:
         if os.path.exists(path102)==1:

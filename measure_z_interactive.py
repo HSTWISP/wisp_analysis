@@ -1157,7 +1157,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     if os.path.exists(g141zeroordreg):
         g141zeroarr = getzeroorders(g141zeroordreg, g='G102')
         # g141firstarr=getfirstorders(g141firstordreg)
-        show2dNEW('G141', parnos[0], objid_unique[0], g102zeroarr, user, 'linear')
+        show2dNEW('G141', parnos[0], objid_unique[0], g141zeroarr, user, 'linear')
     else:
         g141zeroarr = None
         g141firstarr = None
