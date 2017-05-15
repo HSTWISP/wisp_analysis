@@ -1129,6 +1129,9 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     if os.path.basename(secats[0]) == 'fin_F110.cat':
         jmag = cat['col13']
         jerr = cat['col14']
+        # in case there is a F110-only field
+        hmag = np.ones(ra.shape, dtype=float) * 99.
+        herr = np.ones(ra.shape, dtype=float) * 99.
     else:
         jmag = np.ones(ra.shape, dtype=float) * 99.
         jerr = np.ones(ra.shape, dtype=float) * 99.

@@ -149,6 +149,7 @@ def showDirectNEW(obid,load_image=False):
     path160=path2direct+'F160W_drz.fits'
     path140cat=path2direct+'fin_F140.cat'
     path160cat=path2direct+'fin_F160.cat'
+    path110cat=path2direct+'fin_F110.cat'
 
     if os.path.exists(path110)==0 and os.path.exists(path140)==0 and os.path.exists(path160)==0:
         print "No Direct Images Found."
@@ -157,6 +158,9 @@ def showDirectNEW(obid,load_image=False):
         infHcat=open(path140cat,'r')
     elif os.path.exists(path160cat)==1:
         infHcat=open(path160cat,'r')
+    elif os.path.exists(path110cat)==1:
+        # if no Hband, use F110 for catalog
+        infHcat=open(path110cat,'r')
     else:
         return 0
     xcen,ycen=-1,-1
@@ -278,7 +282,8 @@ def showDispersed(obid,load_image=False):  # MB
     # pan to the coordinates of this object
     if os.path.exists(path102):
         panDispersed(x102,y102,grism='G102')
-    panDispersed(x141,y141)
+    if os.path.exists(path141):
+        panDispersed(x141,y141)
 
 
 def createAltGrismRegion(grism):
