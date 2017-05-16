@@ -300,7 +300,8 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     ymin = np.ma.min(spec_val)
     ymax = 1.5 * np.ma.max(spec_val)
 
-    ax1.plot(spec_lam, spec_val, 'k', spec_lam, spec_con, 'r', ls='steps')
+    ax1.plot(spec_lam, spec_val, 'k', spec_lam, spec_con, 'hotpink', ls='steps')
+   
     ax1.axvline(x=config_pars['transition_wave'], c='c', linestyle=':', lw=3)
 
     # transforms for plotting in data and axes coordinates
@@ -308,6 +309,11 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
         ax1.transData, ax1.transAxes)
     ax2trans = mtransforms.blended_transform_factory(
         ax2.transData, ax2.transAxes)
+
+    # contamination model
+    ax1.fill_between(spec_lam, spec_con, -1, color='#ff69b4', alpha=0.1,
+                     step='pre')
+
     # plot observed wavelengths of all the possible lines.
     for li, lstring, sn_meas in zip(lamobs, suplines_str, snr_meas_array):
         if (li > xmin + 100) & (li < xmax - 100):
