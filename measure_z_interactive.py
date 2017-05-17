@@ -380,7 +380,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
         nl_arr.append(spec_lam[w])
         cont_node.append(full_contmodel[w])
     ax1.plot(nl_arr, cont_node, 'ko', ms=9)
-
+    
     # repeat for line_candidates
     lf_lam = []
     lf_cont = []
@@ -448,17 +448,22 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     plottitle = 'Par%i_BEAM_%i' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
     # read in 1D spectrum
+    availgrism = ''
     if os.path.exists(specnameg102):
+        availgrism += 'g102'
         tab_blue = asciitable.read(
             specnameg102, names=['lambda', 'flux', 'ferror', 'contam', 'zero'])
     else:
         tab_blue = None
     # check for g141, too. there are maybe 4 G102-only fields
     if os.path.exists(specnameg141):
+        availgrism += 'g141'
         tab_red = asciitable.read(
             specnameg141, names=['lambda', 'flux', 'ferror', 'contam', 'zero'])
     else:
         tab_red = None
+
+    availgrism = 'both' if availgrism == 'g102g141' else availgrism
 
     # display the object
     if g102zeros is not None:
@@ -482,7 +487,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     herr = objinfo['herr']
 
     # start with a fresh set of config pars
-    config_pars = read_config('default.config')
+    config_pars = read_config('default.config', availgrism=availgrism)
 
     # Data have been successfully loaded for this object. If it has been inspected
     # previously, the original results will have been stored in the SQLLite database
@@ -702,7 +707,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         elif option.strip().lower() == 'nodes':
             strnw = ','.join(str(nw) for nw in config_pars['node_wave'])
             print_prompt("Enter Wavelengths for Continuum Spline: w1, w2, w3, w4, ....")
-            print_prompt("current node wavelengths are: %s)" % strnw)
+            print_prompt("current node wavelengths are: %s" % strnw)
             nodestr = raw_input("> ")
             nodesplit = nodestr.split(',')
             node_arr = []
@@ -720,7 +725,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # reset all options
         elif option.strip().lower() == 'reset':
             print_prompt("Reset configuration parameters, fwhm guess, and zguess to default values")
-            config_pars = read_config('default.config')
+            config_pars = read_config('default.config', availgrism=availgrism)
             fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
             # reset strongest line, too
             index_of_strongest_line = 0

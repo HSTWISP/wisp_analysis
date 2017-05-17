@@ -13,7 +13,7 @@ def is_number(s):
         return False
 
 
-def read_config(config): 
+def read_config(config, availgrism='both'): 
     configfile = open(config, 'r')  
     config_pars = {} 
     for line in configfile:
@@ -21,10 +21,16 @@ def read_config(config):
             name = line.split()[0] 
             
             if name == 'node_wave': 
-               nodelam = [float(s) for s in line.split()[1::]]
-               config_pars.setdefault('node_wave', []) 
-               for l in nodelam:  
-                   config_pars['node_wave'].append(l)
+                tmpnode = [float(s) for s in line.split()[1::]]
+                if availgrism.lower() == 'g102':
+                    nodelam = [x for x in tmpnode if x <= config_pars['transition_wave']]
+                elif availgrism.lower() == 'g141':
+                    nodelam = [x for x in tmpnode if x > config_pars['transition_wave']]
+                else:
+                    nodelam = tmpnode
+                config_pars.setdefault('node_wave', []) 
+                for l in nodelam:  
+                    config_pars['node_wave'].append(l)
             elif name == 'mask_region1':
                 masklam = [float(s) for s in line.split()[1::]]
                 config_pars.setdefault('mask_region1', []) 

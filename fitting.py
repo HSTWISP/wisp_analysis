@@ -103,16 +103,16 @@ def emissionline_model(pars, x):
     node_values_blue = cont_node_values[w2]
     ### add junk nodes on if there are too few for a cubic spline. 
     #### this gets around scipy's stupidity on cubic splines. 
-    i=0
-    while np.size(clam_blue) < 4:
-        i= i +1
-        clam_blue = np.append(clam_blue, transition_wave + 1000*i) 
-        node_values_blue = np.append(node_values_blue, node_values_blue[-1])         
+    if len(clam_blue) > 0:
+        i=0
+        while np.size(clam_blue) < 4:
+            i= i +1
+            clam_blue = np.append(clam_blue, transition_wave + 1000*i) 
+            node_values_blue = np.append(node_values_blue, node_values_blue[-1])         
         
-    cont_spline_rep_blue = interpolate.splrep(clam_blue, node_values_blue, s=0, k=3) 
-    if np.size(w1) > 0:
-        cont_model[w1] = interpolate.splev(x[w1], cont_spline_rep_blue, der=0) 
-    
+        cont_spline_rep_blue = interpolate.splrep(clam_blue, node_values_blue, s=0, k=3) 
+        if np.size(w1) > 0:
+            cont_model[w1] = interpolate.splev(x[w1], cont_spline_rep_blue, der=0) 
 
     ### evaluate the continuum, red side 
     w1  =np.where((x >= transition_wave) & (x < he1_10830_obs  + (fit_region)))
@@ -122,15 +122,16 @@ def emissionline_model(pars, x):
     
     ### add junk nodes on if there are too few for a cubic spline. 
     #### this gets around scipy's stupidity on cubic splines. 
-    i=0
-    while np.size(clam_red) < 4: 
-       i = i  +1
-       clam_red = np.append(transition_wave - 1000 * i, clam_red)  
-       node_values_red = np.append(node_values_red[0], node_values_red) 
+    if len(clam_red) > 0:
+        i=0
+        while np.size(clam_red) < 4: 
+            i = i  +1
+            clam_red = np.append(transition_wave - 1000 * i, clam_red)  
+            node_values_red = np.append(node_values_red[0], node_values_red) 
         
-    cont_spline_rep_red = interpolate.splrep(clam_red, node_values_red, s=0, k=3) 
-    if np.size(w1) > 0: 
-        cont_model[w1] = interpolate.splev(x[w1], cont_spline_rep_red, der=0) 
+        cont_spline_rep_red = interpolate.splrep(clam_red, node_values_red, s=0, k=3) 
+        if np.size(w1) > 0: 
+            cont_model[w1] = interpolate.splev(x[w1], cont_spline_rep_red, der=0) 
 
     
     #### start adding lines: 
@@ -405,7 +406,7 @@ def fit_obj(input_list):
 
     ### set up the arguments that go to the fitters
     fa = {'lam':lam_spec[w], 'flux':flux_spec[w], 'err':error_spec[w]} 
-    
+
     out = mpfit(model_resid, pguess, functkw=fa, parinfo = parinfo, quiet=True)
     #### if out.status is zero then the spectrum was junk.  do not go on. 
     if out.status > 0: 
@@ -634,7 +635,6 @@ def fit_obj(input_list):
         for i in range(19, 19 + 2 * nnodes):  parinfo2[i]['value'] = out.params[i]  #### set x and y values of nodes. 
         for i in range(19+nnodes, 19+2*nnodes): parinfo2[i]['fixed'] = 1   ### fix x values of nodes. 
         
-  
 
        ###z 
         parinfo2[3]['limited'][0] = 1 
