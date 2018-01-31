@@ -442,13 +442,13 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
-    outdir = 'Par%s_output_%s'%(par,user)
+    outdir = 'Par%s_output_%s'%(par,user) 
     if path_to_wisp_data ==  ' ': 
         specnameg102 = 'Par%i_G102_BEAM_%iA.dat' % (par, obj)
         specnameg141 = 'Par%i_G141_BEAM_%iA.dat' % (par, obj)
     else : 
-        specnameg102 = path_to_wisp_data + 'Par' + str(par) + '/Spectra/Par%i_G102_BEAM_%iA.dat' % (par, obj)
-        specnameg141 = path_to_wisp_data + 'Par' + str(par) + '/Spectra/Par%i_G141_BEAM_%iA.dat' % (par, obj)
+        specnameg102 = path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par%i_G102_BEAM_%iA.dat' % (par, obj)
+        specnameg141 = path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par%i_G141_BEAM_%iA.dat' % (par, obj) 
     plottitle = 'Par%i_BEAM_%i' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
     # read in 1D spectrum
@@ -472,13 +472,13 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # display the object
     if g102zeros is not None:
         #show2dNEW('G102', par, obj, g102firsts, g102zeros, 'linear')
-        show2dNEW('G102', par, obj, g102zeros, user, 'linear')
+        show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
     if g141zeros is not None:
-        show2dNEW('G141', par, obj, g141zeros, user, 'linear')
+        show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
     # pan full images to the new object
-    showDirectNEW(obj, par)
+    showDirectNEW(obj, par, path_to_wisp_data = path_to_wisp_data)
     if show_dispersed:
-        showDispersed(obj, par)
+        showDispersed(obj, par, path_to_wisp_data = path_to_wisp_data)
 
     # define parameters for this object
     ra = objinfo['ra']
@@ -619,6 +619,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                                    fitresults['siii_9532_flux'] /
                                    fitresults['siii_9532_error'],
                                    fitresults['he1_flux'] / fitresults['he1_error']])
+        
 
         # plot the whole goddamn thing
         plot_object(zguess, fitresults['redshift'], 
@@ -986,8 +987,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                                  contamflags)
 
             # sqlite3 database support - automatically creates and initializes DB if required
-            databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
-                                                                                   b_image[0], jmag[0], hmag[0], fitresults, flagcont))
+            #databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
+                                                                              #     b_image[0], jmag[0], hmag[0], fitresults, flagcont))
 
             writeToCatalog(linelistoutfile, par, obj, ra, dec, a_image,
                            b_image, jmag, hmag, fitresults, contamflags)
@@ -1000,14 +1001,14 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                                 jmag, hmag, fitresults, flagcont, config_pars]
             pickle.dump(output_meta_data, fitspec_pickle)
             fitspec_pickle.close()
-        else :
-            # done == 1, but zset == 0 => rejected
-            databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
-                                                                                   b_image[0], jmag[0], hmag[0],
-                                                                                   None,
-                                                                                   None))
-            databaseManager.setFlags(par, obj, [('REJECT', 1)])
-            databaseManager.saveAnnotation((par, obj, 'REJECTED'))
+       # else :
+        #    # done == 1, but zset == 0 => rejected
+        #    databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
+        #                                                                           b_image[0], jmag[0], hmag[0],
+        #                                                                           None,
+        #                                                                           None))
+        #    databaseManager.setFlags(par, obj, [('REJECT', 1)])
+        #    databaseManager.saveAnnotation((par, obj, 'REJECTED'))
 
         # write comments to file
         # if we go back to the previous objects, duplicate comments will still be
@@ -1015,10 +1016,10 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         writeComments(commentsfile, par, obj, comment)
 
         # write object to done file, incase process gets interrupted
-        if not os.path.exists('linelist/done_%s'%user):
-            f = open('linelist/done_%s'%user, 'w')
+        if not os.path.exists(outdir + '/done_%s'%user):
+            f = open(outdir + '/done_%s'%user, 'w')
         else:
-            f = open('linelist/done_%s'%user, 'a')
+            f = open(outdir + '/done_%s'%user, 'a')
         f.write('%i\n' % obj)
         f.close()
 
@@ -1113,7 +1114,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
             break
     user = user.strip().lower()
     # create output directory
-    outdir = '%s_output_%s'%(par,user)
+    outdir = 'Par%s_output_%s'%(par,user)
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
 
@@ -1128,7 +1129,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
     linelistoutfile = os.path.join(outdir,'%s_catalog_%s.dat'%(parts[0],user))
     commentsfile = os.path.join(outdir,'%s_comments_%s.dat'%(parts[0],user))
     # the file that will be used to determine which objects are "done"
-    donefile = 'linelist/done_%s'%user
+    donefile = outdir+ '/done_%s'%user
 
     if os.path.isfile(linelistoutfile):
         print_prompt('\nOutput file: \n  %s \nalready exists\n' % linelistoutfile, prompt_type='interim')
@@ -1145,8 +1146,8 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
             # then reset the database tables.
             # All Par numbers in the putative line list file should be the same, so the zeroth
             # element corresponds to the current field ID.
-            databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(parnos[0])))
-            databaseManager.resetDatabaseTables()
+            #databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(parnos[0])))
+            #databaseManager.resetDatabaseTables()
         else:
             # an object may be written to the comment file before it has
             # actually been inspected, so use donefile for a list
