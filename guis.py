@@ -6,7 +6,7 @@ from wisp_analysis import *
 from distutils.sysconfig import *
 
 
-def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75):
+def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75, path_to_wisp_data  = ' '):
 # In version 1.0, will first look for wavelength-calibrated stamps in the G1??_DRIZZLE directories; failing this, will default to old stamps
     # zero and first order positions
 #    firstx = firstarr['x']
@@ -21,16 +21,23 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75):
     dims=()
     zrad=10.0
     workingdir=os.getcwd()
-    dirpts=workingdir.split('/')[1:-1]
     par_root_dir='/'
-    for pdir in dirpts:
-        par_root_dir= par_root_dir +pdir + '/'
-    path2dl=par_root_dir + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits'
+    if path_to_wisp_data == ' ' : 
+        dirpts=workingdir.split('/')[1:-1]
+        for pdir in dirpts:
+            par_root_dir= par_root_dir +pdir + '/'
+        path2dl=par_root_dir + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits'
+    else :
+        path2dl = path_to_wisp_data + '/Par' + str(parno) +'/' + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits' 
+        
     if os.path.exists(path2dl)==1:
         path2d=path2dl
     else:
-        path2d=par_root_dir+'Stamps/Par'+ str(parno)+'_'+grism+'_BEAM_'+str(obid)+'A.fits'
-
+        if path_to_wisp_data == ' ':
+             path2d=par_root_dir+'Stamps/Par'+ str(parno)+'_'+grism+'_BEAM_'+str(obid)+'A.fits'
+        else: 
+             path2d = path_to_wisp_data + '/Par' + str(parno) + '/Stamps/Par' + str(parno) + '_'+grism+'_BEAM_'+str(obid)+'A.fits'
+ 
     if grism=='G102':
         frameno='1'
     elif grism=='G141':
@@ -56,7 +63,11 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75):
     cx = (cx - hdr['CRPIX1'])*hdr['CDELT1'] + hdr['CRVAL1']
     cy = (cy - hdr['CRPIX2'])*hdr['CDELT2'] + hdr['CRVAL2']
     rad = 5 * hdr['CDELT1']
-    outcoo=par_root_dir+"Spectra/temp_zero_coords_%s.reg"%user
+
+    if path_to_wisp_data != ' ' : 
+        par_root_dir = path_to_wisp_data + '/Par' + str(parno) + '/'
+    outcoo = par_root_dir+"Spectra/temp_zero_coords_%s.reg"%user 
+
     if os.path.exists(outcoo)==1:
         os.unlink(outcoo)
     f = open(outcoo, 'w')
@@ -119,7 +130,7 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75):
     cmd='xpaset -p ds9 scale '+zscale
     os.system(cmd)
     #cmd='xpaset -p ds9 zoom to fit'
-    #os.system(cmd)
+    #os.system(cmd) 
     cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/temp_zero_coords_%s.reg'%user
     os.system(cmd)
     # MR
@@ -131,7 +142,7 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75):
 
 
 
-def showDirectNEW(obid,load_image=False):
+def showDirectNEW(obid, parno, load_image=False, path_to_wisp_data = ' '):
     """
     Removed lineno, which was only used to check whether the images 
     should be reloaded.
@@ -140,8 +151,11 @@ def showDirectNEW(obid,load_image=False):
     workingdir=os.getcwd()
     dirpts=workingdir.split('/')[1:-1]
     par_root_dir='/'
-    for pdir in dirpts:
-        par_root_dir= par_root_dir +pdir + '/'
+    if path_to_wisp_data == ' ': 
+        for pdir in dirpts:
+            par_root_dir= par_root_dir +pdir + '/'
+    else: 
+         par_root_dir = path_to_wisp_data + '/Par' + str(parno) + '/'
 
     path2direct=par_root_dir+'DATA/DIRECT_GRISM/'
     path110=path2direct+'F110W_drz.fits'
@@ -208,7 +222,7 @@ def showDirectNEW(obid,load_image=False):
     panDirect(hexcoo[0],hexcoo[1])
 
 
-def showDispersed(obid,load_image=False):  # MB
+def showDispersed(obid, parno, load_image=False, path_to_wisp_data = ' '):  # MB
     """
     Removed lineno, which was only used to check whether the images 
     should be reloaded.
@@ -217,8 +231,15 @@ def showDispersed(obid,load_image=False):  # MB
     workingdir=os.getcwd()
     dirpts=workingdir.split('/')[1:-1]
     par_root_dir='/'
-    for pdir in dirpts:
-        par_root_dir= par_root_dir +pdir + '/'
+    #for pdir in dirpts:
+    #    par_root_dir= par_root_dir +pdir + '/'
+
+    if path_to_wisp_data == ' ': 
+        for pdir in dirpts:
+            par_root_dir= par_root_dir +pdir + '/'
+    else: 
+         par_root_dir = path_to_wisp_data + '/Par' + str(parno) + '/'
+
 
     path2dispersed=par_root_dir+'DATA/DIRECT_GRISM/'
     ### Using G102.fits instead of G102_drz.fits ###
@@ -286,6 +307,8 @@ def showDispersed(obid,load_image=False):  # MB
         panDispersed(x141,y141)
 
 
+
+### AH: 1/26/28: I do not think we are using this? 
 def createAltGrismRegion(grism):
     workingdir=os.getcwd()
     par = os.path.dirname(workingdir)

@@ -438,13 +438,17 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     plt.draw()
 
 
-def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True):
+def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fit = False, path_to_wisp_data = ' '):
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
     outdir = 'Par%s_output_%s'%(par,user)
-    specnameg102 = 'Par%i_G102_BEAM_%iA.dat' % (par, obj)
-    specnameg141 = 'Par%i_G141_BEAM_%iA.dat' % (par, obj)
+    if path_to_wisp_data ==  ' ': 
+        specnameg102 = 'Par%i_G102_BEAM_%iA.dat' % (par, obj)
+        specnameg141 = 'Par%i_G141_BEAM_%iA.dat' % (par, obj)
+    else : 
+        specnameg102 = path_to_wisp_data + 'Par' + str(par) + '/Spectra/Par%i_G102_BEAM_%iA.dat' % (par, obj)
+        specnameg141 = path_to_wisp_data + 'Par' + str(par) + '/Spectra/Par%i_G141_BEAM_%iA.dat' % (par, obj)
     plottitle = 'Par%i_BEAM_%i' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
     # read in 1D spectrum
@@ -472,9 +476,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     if g141zeros is not None:
         show2dNEW('G141', par, obj, g141zeros, user, 'linear')
     # pan full images to the new object
-    showDirectNEW(obj)
+    showDirectNEW(obj, par)
     if show_dispersed:
-        showDispersed(obj)
+        showDispersed(obj, par)
 
     # define parameters for this object
     ra = objinfo['ra']
@@ -493,22 +497,24 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # previously, the original results will have been stored in the SQLLite database
     # and a retrieval obtion should be offered.
 #    databaseManager = WDBM(dbFileNamePrefix='Par{}'.format(par))
-    databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(par)))
-    mostRecentObjectData = databaseManager.getMostRecentObject()
+
+
+#    databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(par)))
+#    mostRecentObjectData = databaseManager.getMostRecentObject()
 #    if mostRecentObjectData is not None :
 #        print('Most recent object in database: Par {}, Obj {}, Date {}'.format(*mostRecentObjectData))
 #    else :
 #        print('Database is empty.')
-    catalogueEntryData = databaseManager.loadCatalogueEntry(parNumber=par, objectId=obj)
+#    catalogueEntryData = databaseManager.loadCatalogueEntry(parNumber=par, objectId=obj)
     rejectPrevFit = True
-    if catalogueEntryData is not None :
-        nonFitResults, fitResults = catalogueEntryData
-        (par_db, obj_db, ra_db, dec_db, jmag_db, hmag_db, a_image_db, b_image_db, contamflag_db, entrytime_db) = nonFitResults
-#        print('Found previous fit results for Pointing {}, Object {}.\nEnter "y" to accept the earlier fit.'.format(par_db, obj_db))
-        print('You have already fit Obj {}. Refit? [y/N]').format(obj)
-        rejectPrevFit = raw_input('> ').strip().lower() == 'y'
-        if rejectPrevFit:
-            comment_out_obj(par, obj, linelistoutfile)
+#    if catalogueEntryData is not None :
+#        nonFitResults, fitResults = catalogueEntryData
+#        (par_db, obj_db, ra_db, dec_db, jmag_db, hmag_db, a_image_db, b_image_db, contamflag_db, entrytime_db) = nonFitResults
+##        print('Found previous fit results for Pointing {}, Object {}.\nEnter "y" to accept the earlier fit.'.format(par_db, obj_db))
+#        print('You have already fit Obj {}. Refit? [y/N]').format(obj)
+#        rejectPrevFit = raw_input('> ').strip().lower() == 'y'
+#        if rejectPrevFit:
+#            comment_out_obj(par, obj, linelistoutfile)
         
 #        print('Accepting previous fit.' if acceptPrevFit else 'Re-fitting this object.')
 #    else :
@@ -527,13 +533,15 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # fwhm is defined for the red side, regardless of where line is
     fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
 
+### replace this with printouts from pickle files
+
     # print object info to screen
-    if rejectPrevFit:
-        print(' ')
-        print_prompt("=" * 72)
-        print_prompt("Par%i Obj %i:" % (par, obj))
-        print_prompt("Initial redshift guess: z = %f" % (zguess))
-        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
+#    if rejectPrevFit:
+#        print(' ')
+#        print_prompt("=" * 72)
+#        print_prompt("Par%i Obj %i:" % (par, obj))
+#        print_prompt("Initial redshift guess: z = %f" % (zguess))
+#        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
 
     comment = ' '
     contamflags = {'o2':0, 'hg':0, 'hb':0, 'o3':0, 'ha':0, 's2':0, 's31':0, \
@@ -561,6 +569,18 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         fit_inputs = [np.ma.compressed(masked_spec_lam), np.ma.compressed(spec_val), np.ma.compressed(spec_unc), config_pars, zguess, fwhm_guess, str(obj)]
         # parsing the input to facilitate parallel processing when fitting
         # is done in batch mode.
+
+        if stored_fit != False: 
+            fileObject = open(stored_fit,'r')
+            alldata = pickle.load(fileObject)
+            config_pars = alldata[10]
+            fitresults_old = alldata[8]
+            zguess = fitresults_old['redshift']
+            fwhm_guess = fitresults_old['fwhm_g141']
+            ### also need to figure out what else to add? 
+            ### config pars for nodes can also be entered here. 
+
+
         fitresults = fit_obj(fit_inputs)
         zfit = fitresults['redshift']
         fitpars = fitresults['fit_parameters']
@@ -640,6 +660,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 zguess = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid Entry.')
+            use_stored = False
 
         # change wavelength guess
         elif option.strip().lower() == 'w':
@@ -653,6 +674,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             else:
                 zguess = newwave / old_rest_wave - 1.
                 lamline = newwave
+            use_stored = False
 
         # change the fwhm guess
         elif option.strip().lower() == 'fw':
@@ -662,6 +684,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 fwhm_guess = config_pars['dispersion_red'] * float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid Entry.')
+            use_stored = False     
 
         # mask out 1, 2, or 3 regions of the spectrum
         elif option.strip().lower() == 'm1':
@@ -674,6 +697,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region1'] = maskwave
+            use_stored = False 
+
         elif option.strip().lower() == 'm2':
             print_prompt("Enter wavelength window to mask out:  blue, red:")
             maskstr = raw_input("> ")
@@ -684,6 +709,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region2'] = maskwave
+            use_stored = False 
+
         elif option.strip().lower() == 'm3':
             print_prompt("Enter wavelength window to mask out:  blue, red (Angstroms:")
             maskstr = raw_input("> ")
@@ -694,6 +721,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region3'] = maskwave
+            use_stored = False 
+
 
         # change the transition wavelength between the grisms
         elif option.strip().lower() == 't':
@@ -702,6 +731,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 config_pars['transition_wave'] = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid entry. Enter wavelength of grism transition.')
+            use_stored = False 
+
 
         # change the nodes used for the continuum spline
         elif option.strip().lower() == 'nodes':
@@ -720,7 +751,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 node_arr = np.array(node_arr)
                 # sort by wavelength
                 node_arr = np.sort(node_arr)
-                config_pars['node_wave'] = node_arr
+                config_pars['node_wave'] = node_arr 
+            use_stored = False 
+
 
         # reset all options
         elif option.strip().lower() == 'reset':
@@ -733,7 +766,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             zguess = lamline / lam_Halpha - 1
             # reset contamflags
             for k, v in contamflags.iteritems():
-                    contamflags[k] = contamflags[k] & 0
+                    contamflags[k] = contamflags[k] & 0 
+            ### if use stored = true, this should set us back to using the pickle file values         
 
         # change the blue cutoff of G102 (or whichever grism is present?)
         elif option.strip().lower() == 'bluecut':
@@ -742,6 +776,8 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 config_pars['lambda_min'] = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid entry. Enter wavelength of blue cutoff.')
+            use_stored = False 
+
 
         # change the red cutoff of G141
         elif option.strip().lower() == 'redcut':
@@ -749,7 +785,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             try:
                 config_pars['lambda_max'] = float(raw_input("> "))
             except ValueError:
-                print_prompt('Invalid entry. Enter wavelength of red cutoff.')
+                print_prompt('Invalid entry. Enter wavelength of red cutoff.') 
+            use_stored = False 
+
 
         # change to next brightest line
         elif option.strip().lower() == 'n':
@@ -760,26 +798,36 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 zguess = lamline / 6564. - 1
             else:
                 print_prompt('There are no other automatically identified peaks. Select another option.')
-                # stay at current line
-                index_of_strongest_line -= 1
+                # stay at current line 
+                index_of_strongest_line -= 1 
+            use_stored = False 
+
 
         # change to another line
         elif option.strip().lower() == 'ha':
             zguess = (lamline / lam_Halpha) - 1
+            use_stored = False 
         elif option.strip().lower() == 'hb':
             zguess = (lamline / lam_Hbeta) - 1
+            use_stored = False 
         elif option.strip().lower() == 'o2':
             zguess = (lamline / lam_Oii) - 1
+            use_stored = False 
         elif option.strip().lower() == 'o31':
-            zguess = (lamline / lam_Oiii_1) - 1
+            zguess = (lamline / lam_Oiii_1) - 1 
+            use_stored = False 
         elif option.strip().lower() == 'o32':
-            zguess = (lamline / lam_Oiii_2) - 1
+            zguess = (lamline / lam_Oiii_2) - 1 
+            use_stored = False 
         elif option.strip().lower() == 's2':
-            zguess = (lamline / lam_Sii) - 1
+            zguess = (lamline / lam_Sii) - 1 
+            use_stored = False 
         elif option.strip().lower() == 's31':
             zguess = (lamline / lam_Siii_1) - 1
+            use_stored = False 
         elif option.strip().lower() == 's32':
             zguess = (lamline / lam_Siii_2) - 1
+            use_stored = False 
 
         # note contamination
         elif option.strip().lower() == 'contam':
@@ -831,6 +879,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 show2dNEW('G102', par, obj, g102zeros, user, 'linear')
             if g141zeros is not None:
                 show2dNEW('G141', par, obj, g141zeros, user, 'linear')
+            use_stored = False 
 
         # change 2d stamp scaling to log
         elif option.strip().lower() == 'log':
@@ -838,6 +887,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 show2dNEW('G102', par, obj, g102zeros, user, 'log')
             if g141zeros is not None:
                 show2dNEW('G141', par, obj, g141zeros, user, 'log')
+            use_stored = False 
 
         # change g102 2d stamp scaling to zscale
         elif option.strip().lower() == 'zs102':
@@ -852,7 +902,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             else:
                 if g102zeros is not None:
                     show2dNEW('G102', par, obj, g102zeros, user, 'linear',
-                              zran1=z1, zran2=z2)
+                              zran1=z1, zran2=z2) 
+            use_stored = False 
+
 
         # change g141 2d stamp scaling to zscale
         elif option.strip().lower() == 'zs141':
@@ -867,23 +919,27 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             else:
                 if g141zeros is not None:
                     show2dNEW('G141', par, obj, g141zeros, user, 'linear',
-                              zran1=z1, zran2=z2)
+                              zran1=z1, zran2=z2) 
+            use_stored = False         
 
         # recenter full images
         elif option.strip().lower() == 'dc':
             showDirectNEW(obj)
             if show_dispersed:  # MB
-                showDispersed(obj)
+                showDispersed(obj) 
+            use_stored = False      
 
         # reload full iamges
         elif option.strip().lower() == 'reload':
             showDirectNEW(obj, load_image=True)
             if show_dispersed:
-                showDispersed(obj, load_image=True)
+                showDispersed(obj, load_image=True) 
+            use_stored = False 
 
         # reload direct image region files
         elif option.strip().lower() == 'dr':
             reloadReg()
+            use_stored = False 
 
         ### new options dealing with iterating objects ###
         # can't actually go back or choose another object now,
@@ -990,13 +1046,18 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=False, print_colors=True):
+def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_dispersed=True, use_stored_fit=False, print_colors=True):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
         for k,v in setcolors.iteritems():
             setcolors[k] = '\033[0m'
 
+    if path_to_wisp_data == ' ': 
+        ### running from the Spectra directory 
+        path_to_wisp_data = '../../' 
+
+      
     #### STEP 0:   set ds9 window to tile mode ################################
     ###########################################################################
     # not the best way to do this, but matching the method in guis.py
@@ -1017,17 +1078,30 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
             return 0
         else:
             linelistfile = files[0]
-
     if not os.path.exists(linelistfile):
         print_prompt("Invalid path to line list file: %s" % (linelistfile), prompt_type='interim')
         return 0
     else:
         print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
 
-    #### STEP 1b:  set user name and output directory #########################
+    #### STEP 1b:   read the list of candidate lines  ####################
     ###########################################################################
-    tmp = glob('Par*BEAM*.dat')[0]
-    par = tmp.split('_')[0]
+    
+    llin = asciitable.read(linelistfile, names=[
+                           'parnos', 'grism', 'objid', 'wavelen', 'npix', 'ston'])
+    parnos = llin['parnos']
+    grism = llin['grism']
+    objid = llin['objid']
+    wavelen = llin['wavelen']
+    npix = llin['npix']
+    ston = llin['ston']
+    objid_unique = np.unique(objid)
+    par = parnos[0]
+
+
+    #### STEP 2:  set user name and output directory #########################
+    ###########################################################################
+    tmp = glob(path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par*BEAM*.dat')[0]
     print_prompt('You are about to inspect emission lines identified in {}'.format(par), prompt_type='interim')
     print_prompt('Please enter your name or desired username', prompt_type='interim')
     while True:
@@ -1042,19 +1116,6 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     outdir = '%s_output_%s'%(par,user)
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
-
-
-    #### STEP 2:   read the list of candidate lines  ####################
-    ###########################################################################
-    llin = asciitable.read(linelistfile, names=[
-                           'parnos', 'grism', 'objid', 'wavelen', 'npix', 'ston'])
-    parnos = llin['parnos']
-    grism = llin['grism']
-    objid = llin['objid']
-    wavelen = llin['wavelen']
-    npix = llin['npix']
-    ston = llin['ston']
-    objid_unique = np.unique(objid)
 
     #### STEP 3: define filenames and check for partially complete work #####
     #########################################################################
@@ -1098,14 +1159,14 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
 
     #### STEP 4: create trace.reg files ############################
     #########################################################################
-    trace102 = open('G102_trace.reg', 'w')
+    trace102 = open(path_to_wisp_data + '/Par'  + str(par) + '/Spectra/G102_trace.reg', 'w')
     trace102.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
     trace102.write('wcs;\n')
     # sensitivity drops below 25% of max at wave < 8250 and wave > 11540
     # so box should be 3290 angstroms wide and be centered at 9895.
     trace102.write('box(9895,0,3290,1,1.62844e-12)\n')
     trace102.close()
-    trace141 = open('G141_trace.reg', 'w')
+    trace141 = open(path_to_wisp_data + '/Par' + str(par) + '/Spectra/G141_trace.reg', 'w')
     trace141.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
     trace141.write('wcs;\n')
     # sensitivity drops below 25% of max at wave < 10917 and wave > 16904
@@ -1115,10 +1176,10 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
 
     #### STEP 5:  Get zero and first order positions; unpack them ###########
     #########################################################################
-    g102zeroordreg = "../DATA/DIRECT_GRISM/G102_0th.reg"
-    g102firstordreg = "../DATA/DIRECT_GRISM/G102_1st.reg"
-    g141zeroordreg = "../DATA/DIRECT_GRISM/G141_0th.reg"
-    g141firstordreg = "../DATA/DIRECT_GRISM/G141_1st.reg"
+    g102zeroordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G102_0th.reg'
+    g102firstordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G102_1st.reg'
+    g141zeroordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G141_0th.reg'
+    g141firstordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G141_1st.reg'
 
     #### STEP 6:  Get object information from SExtractor catalog ############
     #########################################################################
@@ -1128,7 +1189,7 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     # ra/dec, b_image, jmag, jerr, hmag, herr will be carried forward into
     #   the output linelist.
     # find all available cats
-    secats = glob('../DATA/DIRECT_GRISM/fin_F*.cat')
+    secats = glob(path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/fin_F*.cat')
     secats.sort()
     cat = asciitable.read(secats[0])
     beam = cat['col2']
@@ -1164,21 +1225,21 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         g102zeroarr = getzeroorders(g102zeroordreg, g='G102')
         # nothing is done with the first orders anymore
         # g102firstarr=getfirstorders(g102firstordreg)
-        show2dNEW('G102', parnos[0], objid_unique[0], g102zeroarr, user, 'linear')
+        show2dNEW('G102', parnos[0], objid_unique[0], g102zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
     else:
         g102zeroarr = None
         g102firstarr = None
     if os.path.exists(g141zeroordreg):
         g141zeroarr = getzeroorders(g141zeroordreg, g='G102')
         # g141firstarr=getfirstorders(g141firstordreg)
-        show2dNEW('G141', parnos[0], objid_unique[0], g141zeroarr, user, 'linear')
+        show2dNEW('G141', parnos[0], objid_unique[0], g141zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
     else:
         g141zeroarr = None
         g141firstarr = None
 
-    showDirectNEW(objid_unique[0], load_image=True)
+    showDirectNEW(objid_unique[0], parnos[0], load_image=True, path_to_wisp_data = path_to_wisp_data)
     if show_dispersed:  # MB
-        showDispersed(objid_unique[0], load_image=True)
+        showDispersed(objid_unique[0], parnos[0], load_image=True, path_to_wisp_data  = path_to_wisp_data)
 
     #### STEP 8:  Loop through objects ############
     #########################################################################
@@ -1245,10 +1306,27 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
         ston_found = ston[wlinelist]
         wcatalog = np.where(objtable['obj'] == next_obj)
         objinfo = objtable[wcatalog]
-        inspect_object(user, parnos[0], next_obj, objinfo, lamlines_found, 
-                       ston_found, g102zeroarr, g141zeroarr, linelistoutfile, 
-                       commentsfile, remaining_objects, allobjects,
-                       show_dispersed=show_dispersed)
+        #inspect_object(user, parnos[0], next_obj, objinfo, lamlines_found, 
+        #               ston_found, g102zeroarr, g141zeroarr, linelistoutfile, 
+        #               commentsfile, remaining_objects, allobjects,
+        #               show_dispersed=show_dispersed)
+       
+        #if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True):
+        if (use_stored_fit == True):
+            print  'I should not be doing this, use stored data is False'
+            inpickle = './fitdata/' +fitdatafilename + '.pickle'
+            inspect_object(user, parnos[0], next_obj, objinfo, 
+                                lamlines_found, ston_found, g102zeroarr, 
+                                g141zeroarr, linelistoutfile, commentsfile, 
+                                remaining_objects, allobjects, 
+                                 show_dispersed=show_dispersed, stored_fit = inpickle, path_to_wisp_data = path_to_wisp_data) 
+        else: 
+            inspect_object(user, parnos[0], next_obj, objinfo, 
+                            lamlines_found, ston_found, g102zeroarr, 
+                            g141zeroarr, linelistoutfile, commentsfile, 
+                            remaining_objects, allobjects, 
+                            show_dispersed=show_dispersed, stored_fit = False, path_to_wisp_data = path_to_wisp_data) 
+
         objid_done = np.append(objid_done, next_obj)
         remaining_objects = get_remaining_objects(objid_unique, objid_done)
 
@@ -1271,11 +1349,21 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
                     ston_found = ston[wlinelist]
                     wcatalog = np.where(objtable['obj'] == next_obj)
                     objinfo = objtable[wcatalog]
-                    inspect_object(user, parnos[0], next_obj, objinfo, 
-                                   lamlines_found, ston_found, g102zeroarr, 
-                                   g141zeroarr, linelistoutfile, commentsfile, 
-                                   remaining_objects, allobjects, 
-                                   show_dispersed=show_dispersed)
+                    if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True):
+                        inpickle = './fitdata/' +fitdatafilename + '.pickle'
+
+                        inspect_object(user, parnos[0], next_obj, objinfo, 
+                                       lamlines_found, ston_found, g102zeroarr, 
+                                       g141zeroarr, linelistoutfile, commentsfile, 
+                                       remaining_objects, allobjects, 
+                                       show_dispersed=show_dispersed, stored_fit = inpickle) 
+                    else: 
+                        inspect_object(user, parnos[0], next_obj, objinfo, 
+                                       lamlines_found, ston_found, g102zeroarr, 
+                                       g141zeroarr, linelistoutfile, commentsfile, 
+                                       remaining_objects, allobjects, 
+                                       show_dispersed=show_dispersed, stored_fit = False) 
+
                 else:
                     break
 
@@ -1283,16 +1371,8 @@ def measure_z_interactive(linelistfile=" ", show_dispersed=True, use_stored_fit=
     print_prompt('A tarfile of your outputs has been created: %s.tar.gz'%outdir, prompt_type='interim')
         
 
-# XXX this is never actually called????
-# XXX        ### it may be desirable to overwrite the inital guesses, if we are trying to update the object.
-# XXX        if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True):
-# XXX            inpickle = './fitdata/' +fitdatafilename + '.pickle'
-# XXX            fileObject = open(inpickle,'r')
-# XXX            alldata = pickle.load(fileObject)
-# XXX            fitresults_old = alldata[8]
-# XXX            config_pars = alldata[10]
-# XXX            zguess = fitresults_old['redshift']
-# XXX            fwhm_guess = fitresults_old['fwhm_g141']
+
+
 
    # Clean up temp files
     if os.path.exists('./tempcoo.dat') == 1:
