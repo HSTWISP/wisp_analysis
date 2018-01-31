@@ -533,6 +533,19 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # fwhm is defined for the red side, regardless of where line is
     fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
 
+
+    if stored_fit != False: 
+            fileObject = open(stored_fit,'r')
+            alldata = pickle.load(fileObject)
+            config_pars = alldata[10]
+            fitresults_old = alldata[8]
+            zguess = fitresults_old['redshift']
+            fwhm_guess = fitresults_old['fwhm_g141']
+            ### also need to figure out what else to add? 
+            ### config pars for nodes can also be entered here. 
+
+
+
 ### replace this with printouts from pickle files
 
     # print object info to screen
@@ -569,17 +582,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         fit_inputs = [np.ma.compressed(masked_spec_lam), np.ma.compressed(spec_val), np.ma.compressed(spec_unc), config_pars, zguess, fwhm_guess, str(obj)]
         # parsing the input to facilitate parallel processing when fitting
         # is done in batch mode.
-
-        if stored_fit != False: 
-            fileObject = open(stored_fit,'r')
-            alldata = pickle.load(fileObject)
-            config_pars = alldata[10]
-            fitresults_old = alldata[8]
-            zguess = fitresults_old['redshift']
-            fwhm_guess = fitresults_old['fwhm_g141']
-            ### also need to figure out what else to add? 
-            ### config pars for nodes can also be entered here. 
-
 
         fitresults = fit_obj(fit_inputs)
         zfit = fitresults['redshift']
@@ -661,7 +663,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 zguess = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid Entry.')
-            use_stored = False
 
         # change wavelength guess
         elif option.strip().lower() == 'w':
@@ -675,7 +676,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             else:
                 zguess = newwave / old_rest_wave - 1.
                 lamline = newwave
-            use_stored = False
 
         # change the fwhm guess
         elif option.strip().lower() == 'fw':
@@ -685,7 +685,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 fwhm_guess = config_pars['dispersion_red'] * float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid Entry.')
-            use_stored = False     
 
         # mask out 1, 2, or 3 regions of the spectrum
         elif option.strip().lower() == 'm1':
@@ -698,7 +697,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region1'] = maskwave
-            use_stored = False 
 
         elif option.strip().lower() == 'm2':
             print_prompt("Enter wavelength window to mask out:  blue, red:")
@@ -710,7 +708,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region2'] = maskwave
-            use_stored = False 
 
         elif option.strip().lower() == 'm3':
             print_prompt("Enter wavelength window to mask out:  blue, red (Angstroms:")
@@ -722,7 +719,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('Invalid entry. Enter wavelengths separated by commas')
             else:
                 config_pars['mask_region3'] = maskwave
-            use_stored = False 
 
 
         # change the transition wavelength between the grisms
@@ -732,7 +728,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 config_pars['transition_wave'] = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid entry. Enter wavelength of grism transition.')
-            use_stored = False 
 
 
         # change the nodes used for the continuum spline
@@ -753,7 +748,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 # sort by wavelength
                 node_arr = np.sort(node_arr)
                 config_pars['node_wave'] = node_arr 
-            use_stored = False 
 
 
         # reset all options
@@ -777,7 +771,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 config_pars['lambda_min'] = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid entry. Enter wavelength of blue cutoff.')
-            use_stored = False 
 
 
         # change the red cutoff of G141
@@ -787,7 +780,6 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 config_pars['lambda_max'] = float(raw_input("> "))
             except ValueError:
                 print_prompt('Invalid entry. Enter wavelength of red cutoff.') 
-            use_stored = False 
 
 
         # change to next brightest line
@@ -801,34 +793,25 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 print_prompt('There are no other automatically identified peaks. Select another option.')
                 # stay at current line 
                 index_of_strongest_line -= 1 
-            use_stored = False 
 
 
         # change to another line
         elif option.strip().lower() == 'ha':
             zguess = (lamline / lam_Halpha) - 1
-            use_stored = False 
         elif option.strip().lower() == 'hb':
             zguess = (lamline / lam_Hbeta) - 1
-            use_stored = False 
         elif option.strip().lower() == 'o2':
             zguess = (lamline / lam_Oii) - 1
-            use_stored = False 
         elif option.strip().lower() == 'o31':
             zguess = (lamline / lam_Oiii_1) - 1 
-            use_stored = False 
         elif option.strip().lower() == 'o32':
             zguess = (lamline / lam_Oiii_2) - 1 
-            use_stored = False 
         elif option.strip().lower() == 's2':
             zguess = (lamline / lam_Sii) - 1 
-            use_stored = False 
         elif option.strip().lower() == 's31':
             zguess = (lamline / lam_Siii_1) - 1
-            use_stored = False 
         elif option.strip().lower() == 's32':
             zguess = (lamline / lam_Siii_2) - 1
-            use_stored = False 
 
         # note contamination
         elif option.strip().lower() == 'contam':
@@ -877,18 +860,16 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # change 2d stamp scaling to linear
         elif option.strip().lower() == 'lin':
             if g102zeros is not None:
-                show2dNEW('G102', par, obj, g102zeros, user, 'linear')
+                show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
             if g141zeros is not None:
-                show2dNEW('G141', par, obj, g141zeros, user, 'linear')
-            use_stored = False 
+                show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
 
         # change 2d stamp scaling to log
         elif option.strip().lower() == 'log':
             if g102zeros is not None:
-                show2dNEW('G102', par, obj, g102zeros, user, 'log')
+                show2dNEW('G102', par, obj, g102zeros, user, 'log', path_to_wisp_data = path_to_wisp_data )
             if g141zeros is not None:
-                show2dNEW('G141', par, obj, g141zeros, user, 'log')
-            use_stored = False 
+                show2dNEW('G141', par, obj, g141zeros, user, 'log', path_to_wisp_data = path_to_wisp_data)
 
         # change g102 2d stamp scaling to zscale
         elif option.strip().lower() == 'zs102':
@@ -903,8 +884,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             else:
                 if g102zeros is not None:
                     show2dNEW('G102', par, obj, g102zeros, user, 'linear',
-                              zran1=z1, zran2=z2) 
-            use_stored = False 
+                              zran1=z1, zran2=z2, path_to_wisp_data = path_to_wisp_data) 
 
 
         # change g141 2d stamp scaling to zscale
@@ -920,27 +900,23 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             else:
                 if g141zeros is not None:
                     show2dNEW('G141', par, obj, g141zeros, user, 'linear',
-                              zran1=z1, zran2=z2) 
-            use_stored = False         
+                              zran1=z1, zran2=z2, path_to_wisp_data = path_to_wisp_Data ) 
 
         # recenter full images
         elif option.strip().lower() == 'dc':
-            showDirectNEW(obj)
+            showDirectNEW(obj, path_to_wisp_data = path_two_wisp_data )
             if show_dispersed:  # MB
-                showDispersed(obj) 
-            use_stored = False      
+                showDispersed(obj, path_to_wisp_data = path_to_wisp_data) 
 
         # reload full iamges
         elif option.strip().lower() == 'reload':
-            showDirectNEW(obj, load_image=True)
+            showDirectNEW(obj, load_image=True, path_to_wisp_data=path_to_wisp_data )
             if show_dispersed:
-                showDispersed(obj, load_image=True) 
-            use_stored = False 
+                showDispersed(obj, load_image=True, path_to_wisp_data = path_to_wisp_data) 
 
         # reload direct image region files
         elif option.strip().lower() == 'dr':
             reloadReg()
-            use_stored = False 
 
         ### new options dealing with iterating objects ###
         # can't actually go back or choose another object now,
@@ -1314,7 +1290,6 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
        
         #if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True):
         if (use_stored_fit == True):
-            print  'I should not be doing this, use stored data is False'
             inpickle = './fitdata/' +fitdatafilename + '.pickle'
             inspect_object(user, parnos[0], next_obj, objinfo, 
                                 lamlines_found, ston_found, g102zeroarr, 
