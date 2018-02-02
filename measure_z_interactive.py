@@ -438,7 +438,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     plt.draw()
 
 
-def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fit = False, path_to_wisp_data = ' '):
+def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_wisp_data = ' '):
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
@@ -534,13 +534,14 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
 
 
-    if stored_fit != False: 
-            fileObject = open(stored_fit,'r')
-            alldata = pickle.load(fileObject)
-            config_pars = alldata[10]
-            fitresults_old = alldata[8]
-            zguess = fitresults_old['redshift']
-            fwhm_guess = fitresults_old['fwhm_g141']
+    if stored_fits != False:
+        first_stored_fit = stored_fits[0]
+        fileObject = open(first_stored_fit,'r')
+        alldata = pickle.load(fileObject)
+        config_pars = alldata[10]
+        fitresults_old = alldata[8]
+        zguess = fitresults_old['redshift']
+        fwhm_guess = fitresults_old['fwhm_g141']
             ### also need to figure out what else to add? 
             ### config pars for nodes can also be entered here. 
 
@@ -830,14 +831,14 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 except KeyError:
                     print_prompt('{} not known. Skipping'.format(contamflag))
             # sqlite3 database support - automatically creates and initializes DB if required
-            databaseManager.setFlags(par, obj, [(flagName, flagValue) for flagName, flagValue in contamflags.iteritems()])
+            #databaseManager.setFlags(par, obj, [(flagName, flagValue) for flagName, flagValue in contamflags.iteritems()])
 
         # add a comment
         elif option.strip().lower() == 'c':
             print_prompt("Enter your comment here:")
             comment = raw_input("> ")
             # sqlite3 database support - automatically creates and initializes DB if required
-            databaseManager.saveAnnotation((par, obj, comment.decode('utf-8')))
+           # databaseManager.saveAnnotation((par, obj, comment.decode('utf-8')))
 
         # set or unset one or more flags
         elif option.strip().lower() == 'flag':
@@ -845,7 +846,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
             print_prompt('Valid flags are {}'.format(WISPLFDatabaseManager.WISPLFDatabaseManager.validMutableFlags))
             flagList = raw_input("> ")
             # sqlite3 database support - automatically creates and initializes DB if required
-            databaseManager.setFlagsFromString(par, obj, flagList.decode('utf-8'))
+            #databaseManager.setFlagsFromString(par, obj, flagList.decode('utf-8'))
 
         # write object summary
         elif option.strip().lower() == 's':
@@ -1023,7 +1024,7 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_dispersed=True, use_stored_fit=False, print_colors=True):
+def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
@@ -1034,6 +1035,14 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         ### running from the Spectra directory 
         path_to_wisp_data = '../../' 
 
+
+    if path_to_stored_fits == ' ': 
+        use_stored_fits  = False 
+    elif os.path.exists(path_to_stored_fits) : 
+        use_stored_fits = True 
+    else: 
+        use_stored_fits = False 
+    
       
     #### STEP 0:   set ds9 window to tile mode ################################
     ###########################################################################
@@ -1074,6 +1083,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
     ston = llin['ston']
     objid_unique = np.unique(objid)
     par = parnos[0]
+
 
 
     #### STEP 2:  set user name and output directory #########################
@@ -1288,20 +1298,58 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         #               commentsfile, remaining_objects, allobjects,
         #               show_dispersed=show_dispersed)
        
-        #if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True):
-        if (use_stored_fit == True):
-            inpickle = './fitdata/' +fitdatafilename + '.pickle'
-            inspect_object(user, parnos[0], next_obj, objinfo, 
+        if (use_stored_fits == True):
+            ### get pickle files: 
+            inpickles = [] 
+            path_pickle1 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_mbagley/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
+            path_pickle2 = path_to_stored_fits + '/Par'  + str(parnos[0]) +    '_output_marc/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle3 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_claudia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle4 = path_to_stored_fits + '/Par'  + str(parnos[0]) +     '_output_ben/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle5 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_vihang/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle6 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_ivano/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle7 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mbeck/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle8 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_karlenoid/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle9 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mjr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle10 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_sophia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+
+            if os.path.exists(path_pickle1): 
+                inpickles.append(path_pickle1) 
+            if os.path.exists(path_pickle2): 
+                inpickles.append(path_pickle2) 
+            if os.path.exists(path_pickle3): 
+                inpickles.append(path_pickle3)  
+            if os.path.exists(path_pickle4): 
+                inpickles.append(path_pickle4) 
+            if os.path.exists(path_pickle5): 
+                inpickles.append(path_pickle5) 
+            if os.path.exists(path_pickle6): 
+                inpickles.append(path_pickle6) 
+            if os.path.exists(path_pickle7): 
+                inpickles.append(path_pickle7) 
+            if os.path.exists(path_pickle8): 
+                inpickles.append(path_pickle8)  
+            if os.path.exists(path_pickle9): 
+                inpickles.append(path_pickle9) 
+            if os.path.exists(path_pickle10): 
+                inpickles.append(path_pickle10) 
+ 
+            if len(inpickles) == 0:
+                use_stored_fits = False 
+
+                
+            
+        if use_stored_fits == True:
+             inspect_object(user, parnos[0], next_obj, objinfo, 
                                 lamlines_found, ston_found, g102zeroarr, 
                                 g141zeroarr, linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
-                                 show_dispersed=show_dispersed, stored_fit = inpickle, path_to_wisp_data = path_to_wisp_data) 
+                                 show_dispersed=show_dispersed, stored_fits = inpickles, path_to_wisp_data = path_to_wisp_data) 
         else: 
             inspect_object(user, parnos[0], next_obj, objinfo, 
                             lamlines_found, ston_found, g102zeroarr, 
                             g141zeroarr, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
-                            show_dispersed=show_dispersed, stored_fit = False, path_to_wisp_data = path_to_wisp_data) 
+                            show_dispersed=show_dispersed, stored_fits = False, path_to_wisp_data = path_to_wisp_data) 
 
         objid_done = np.append(objid_done, next_obj)
         remaining_objects = get_remaining_objects(objid_unique, objid_done)
@@ -1325,14 +1373,12 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
                     ston_found = ston[wlinelist]
                     wcatalog = np.where(objtable['obj'] == next_obj)
                     objinfo = objtable[wcatalog]
-                    if (use_stored_fit ==True) & (os.path.exists('./fitdata/'+ fitdatafilename + '.pickle') == True):
-                        inpickle = './fitdata/' +fitdatafilename + '.pickle'
-
+                    if (use_stored_fits ==True): 
                         inspect_object(user, parnos[0], next_obj, objinfo, 
                                        lamlines_found, ston_found, g102zeroarr, 
                                        g141zeroarr, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
-                                       show_dispersed=show_dispersed, stored_fit = inpickle) 
+                                       show_dispersed=show_dispersed, stored_fits = inpickles) 
                     else: 
                         inspect_object(user, parnos[0], next_obj, objinfo, 
                                        lamlines_found, ston_found, g102zeroarr, 
