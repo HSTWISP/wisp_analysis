@@ -438,7 +438,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     plt.draw()
 
 
-def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_data = ' '):
+def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_data = ' '):
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
@@ -523,7 +523,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, linelist
 
     # get line, fwhm, z estimate
     # choose the lamline that has the highest S/N estimate
-    s = np.argsort(ston_found)
+    #s = np.argsort(ston_found)
     # reverse s/n order
 
     #ston_found = ston_found[s[::-1]]
@@ -533,8 +533,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, linelist
     #zguess = lamline / lam_Halpha - 1
     # fwhm is defined for the red side, regardless of where line is
 
-    fwhm_guess = 2.35 * 4 * config_pars['dispersion_red']
-    zguess = XXXXXX 
+    fwhm_guess = 2.35 * 3 * config_pars['dispersion_red']
+    zguess =  zguess_obj 
+    lamline = 5007 * (1+zguess_obj) 
     
 
     if stored_fits != False:
@@ -762,7 +763,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, linelist
             # reset strongest line, too
             index_of_strongest_line = 0
             lamline = lamlines_found[index_of_strongest_line]
-            zguess = lamline / lam_Halpha - 1
+            zguess = lamline / 5007. - 1
             # reset contamflags
             for k, v in contamflags.iteritems():
                     contamflags[k] = contamflags[k] & 0 
@@ -1086,7 +1087,8 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
     grism = ['G141'] * len(field) 
     objid = llin['id'] 
     z = llin['z_best'] 
-    wavelen =  5007 * (1+z) 
+    wavelen =  5007 * (1+z)
+
 
 
 
@@ -1197,14 +1199,14 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
 
     #### STEP 8:  Loop through objects ############
     #########################################################################
-    remaining_objects = get_remaining_objects(objid_unique, objid_done)
-    allobjects = [unique_obj for unique_obj in objid_unique]
+    remaining_objects = get_remaining_objects(objid, objid_done)
+    allobjects = [obj for obj in objid]
 
     print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n', prompt_type='interim')
 
     while remaining_objects.shape[0] > 0:
         ndone = len(np.unique(objid_done))
-        progress = float(ndone) / float(len(objid_unique)) * 100.
+        progress = float(ndone) / float(len(objid)) * 100.
         print_prompt("\nProgress: %.1f percent" % (progress),prompt_type='interim')
 
         # do some things as long as there are still objects to inspect
@@ -1245,22 +1247,20 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
         elif isFloat(o.strip()):
             next_obj = int(re.search('\d+', o).group())
             # confirm that requested object is in line list
-            next_obj = check_input_objid(objid_unique, next_obj, remaining_objects[0])
+            next_obj = check_input_objid(objid, next_obj, remaining_objects[0])
             next_obj = next_obj if next_obj else remaining_objects[0]
         elif 'obj' in o:
             next_obj = int(re.search('\d+', o).group())
             # confirm that requested object is in line list
-            next_obj = check_input_objid(objid_unique, next_obj, remaining_objects[0])
+            next_obj = check_input_objid(objid, next_obj, remaining_objects[0])
             next_obj = next_obj if next_obj else remaining_objects[0]
 
         
         # pass the information for this object
         wlinelist = np.where(objid == next_obj)
         lamlines_found = wavelen[wlinelist]
-        ston_found = ston[wlinelist]
-        wcatalog = np.where(objtable['obj'] == next_obj)
-        objinfo = objtable[wcatalog]
-       
+        zguess_obj = z[wlinelist]
+               
        #inspect_object(user, field[0], next_obj, objinfo, lamlines_found, 
         #               ston_found, g102zeroarr, g141zeroarr, linelistoutfile, 
         #               commentsfile, remaining_objects, allobjects,
@@ -1280,20 +1280,20 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
             if len(inpickles) == 0:
                 use_stored_fits = False 
 
-            inspect_object(user, field[0], next_obj, objinfo, 
-                                lamlines_found, ston_found, linelistoutfile, commentsfile, 
+            inspect_object(user, field[0], next_obj, zguess_obj, 
+                                lamlines_found,  linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
                                  show_dispersed=show_dispersed, stored_fits = inpickles, path_to_data = path_to_data) 
              
 
         else: 
-            inspect_object(user, field[0], next_obj, objinfo, 
-                            lamlines_found, ston_found, linelistoutfile, commentsfile, 
+            inspect_object(user, field[0], next_obj, zguess_obj, 
+                            lamlines_found, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
                             show_dispersed=show_dispersed, stored_fits = False, path_to_data = path_to_data) 
 
         objid_done = np.append(objid_done, next_obj)
-        remaining_objects = get_remaining_objects(objid_unique, objid_done)
+        remaining_objects = get_remaining_objects(objid, objid_done)
 
     # outside the while loop, field is done
     redo = ' '
@@ -1306,22 +1306,20 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
             except (ValueError,AttributeError):
                 print_prompt("Invalid entry. Enter an object ID or enter 'q' to quit", prompt_type='interim')
             else:
-                next_obj = check_input_objid(objid_unique, next_obj, 0)
+                next_obj = check_input_objid(objid, next_obj, 0)
                 if next_obj:
                     # pass the information for this object
                     wlinelist = np.where(objid == next_obj)
                     lamlines_found = wavelen[wlinelist]
-                    ston_found = ston[wlinelist]
-                    wcatalog = np.where(objtable['obj'] == next_obj)
-                    objinfo = objtable[wcatalog]
+                    zguess_obj = z[wlinelist]
                     if (use_stored_fits ==True): 
-                        inspect_object(user, field[0], next_obj, objinfo, 
-                                       lamlines_found, ston_found, linelistoutfile, commentsfile, 
+                        inspect_object(user, field[0], next_obj, zguess_obj, 
+                                       lamlines_found, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
                                        show_dispersed=show_dispersed, stored_fits = inpickles) 
                     else: 
-                        inspect_object(user, field[0], next_obj, objinfo, 
-                                       lamlines_found, ston_found, linelistoutfile, commentsfile, 
+                        inspect_object(user, field[0], next_obj, zguess_obj, 
+                                       lamlines_found, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
                                        show_dispersed=show_dispersed, stored_fit = False) 
 
@@ -1355,60 +1353,54 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
 
 
 # field, objid are scalar not array.
-def writeToCatalog(catalogname, field, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, contamflags):
+def writeToCatalog(catalogname, field, objid, fitresults, contamflags):
     if not os.path.exists(catalogname):
         cat = open(catalogname, 'w')
-        cat.write('#1  ParNo\n')
+        cat.write('#1  Field\n')
         cat.write('#2  ObjID\n')
-        cat.write('#3 RA \n')
-        cat.write('#4 Dec \n')
-        cat.write('#5 Jmagnitude [99.0 denotes no detection] \n')
-        cat.write('#6 Hmagnitude [99.0 denotes no detection] \n')
-        cat.write('#7 A_IMAGE \n')
-        cat.write('#8 B_IMAGE \n')
-        cat.write('#9 redshift \n')
-        cat.write('#10 redshift_err \n')
-        cat.write('#11 dz_oiii \n')
-        cat.write('#12 dz_oii \n')
-        cat.write('#13 dz_siii_he1 \n')
-        cat.write('#14 G141_FWHM_Obs  [Angs] \n')
-        cat.write('#15 G141_FWHM_Obs_err  \n')
-        cat.write('#16 oii_flux \n')
-        cat.write('#17 oii_err \n')
-        cat.write('#18 oii_EW_obs \n')
-        cat.write('#19 oii_contam \n')
-        cat.write('#20 hg_flux \n')
-        cat.write('#21 hg_err \n')
-        cat.write('#22 hg_EW_obs \n')
-        cat.write('#23 hg_contam \n')
-        cat.write('#24 hb_flux \n')
-        cat.write('#25 hb_err \n')
-        cat.write('#26 hb_EW_obs \n')
-        cat.write('#27 hb_contam \n')
-        cat.write('#28 oiii_flux [both lines] \n')
-        cat.write('#29 oiii_err [both lines] \n')
-        cat.write('#30 oiii_EW_obs [both lines] \n')
-        cat.write('#31 oiii_contam [both lines] \n')
-        cat.write('#32 hanii_flux \n')
-        cat.write('#33 hanii_err \n')
-        cat.write('#34 hanii_EW_obs \n')
-        cat.write('#35 hanii_contam \n')
-        cat.write('#36 sii_flux \n')
-        cat.write('#37 sii_err \n')
-        cat.write('#38 sii_EW_obs \n')
-        cat.write('#39 sii_contam \n')
-        cat.write('#40 siii_9069_flux \n')
-        cat.write('#41 siii_9069_err \n')
-        cat.write('#42 siii_9069_EW_obs \n')
-        cat.write('#43 siii_9069_contam \n')
-        cat.write('#44 siii_9532_flux \n')
-        cat.write('#45 siii_9532_err \n')
-        cat.write('#46 siii_9532_EW_obs \n')
-        cat.write('#47 siii_9532_contam \n')
-        cat.write('#48 he1_10830_flux \n')
-        cat.write('#49 he1_10830_err \n')
-        cat.write('#50 he1_10830_EW_obs \n')
-        cat.write('#51 he1_10830_contam \n')
+        cat.write('#3 redshift \n')
+        cat.write('#4 redshift_err \n')
+        cat.write('#5 dz_oiii \n')
+        cat.write('#6 dz_oii \n')
+        cat.write('#7 dz_siii_he1 \n')
+        cat.write('#8 G141_FWHM_Obs  [Angs] \n')
+        cat.write('#9 G141_FWHM_Obs_err  \n')
+        cat.write('#10 oii_flux \n')
+        cat.write('#11 oii_err \n')
+        cat.write('#12 oii_EW_obs \n')
+        cat.write('#13 oii_contam \n')
+        cat.write('#14 hg_flux \n')
+        cat.write('#15 hg_err \n')
+        cat.write('#16 hg_EW_obs \n')
+        cat.write('#17 hg_contam \n')
+        cat.write('#18 hb_flux \n')
+        cat.write('#19 hb_err \n')
+        cat.write('#20 hb_EW_obs \n')
+        cat.write('#21 hb_contam \n')
+        cat.write('#22 oiii_flux [both lines] \n')
+        cat.write('#23 oiii_err [both lines] \n')
+        cat.write('#24 oiii_EW_obs [both lines] \n')
+        cat.write('#25 oiii_contam [both lines] \n')
+        cat.write('#26 hanii_flux \n')
+        cat.write('#27 hanii_err \n')
+        cat.write('#28 hanii_EW_obs \n')
+        cat.write('#29 hanii_contam \n')
+        cat.write('#30 sii_flux \n')
+        cat.write('#31 sii_err \n')
+        cat.write('#32 sii_EW_obs \n')
+        cat.write('#33 sii_contam \n')
+        cat.write('#34 siii_9069_flux \n')
+        cat.write('#35 siii_9069_err \n')
+        cat.write('#36 siii_9069_EW_obs \n')
+        cat.write('#37 siii_9069_contam \n')
+        cat.write('#38 siii_9532_flux \n')
+        cat.write('#39 siii_9532_err \n')
+        cat.write('#40 siii_9532_EW_obs \n')
+        cat.write('#41 siii_9532_contam \n')
+        cat.write('#42 he1_10830_flux \n')
+        cat.write('#43 he1_10830_err \n')
+        cat.write('#44 he1_10830_EW_obs \n')
+        cat.write('#45 he1_10830_contam \n')
 
 #        cat.write('#43 ContamFlag \n')
         cat.close()
@@ -1419,12 +1411,6 @@ def writeToCatalog(catalogname, field, objid, ra_obj, dec_obj, a_image_obj, b_im
 
     outstr = '{:<8d}'.format(field) + \
         '{:<6d}'.format(objid) +\
-        '{:<12.6f}'.format(ra_obj[0]) + \
-        '{:<12.6f}'.format(dec_obj[0]) + \
-        '{:<8.2f}'.format(jmag_obj[0]) + \
-        '{:<8.2f}'.format(hmag_obj[0]) + \
-        '{:<8.3f}'.format(a_image_obj[0]) + \
-        '{:<8.3f}'.format(b_image_obj[0]) + \
         '{:>8.4f}'.format(fitresults['redshift']) + \
         '{:>10.4f}'.format(fitresults['redshift_err']) +\
         '{:>10.4f}'.format(fitresults['dz_oiii'])  + \
@@ -1533,19 +1519,12 @@ def UpdateCatalog(linelistoutfile):
         fileObject = open(inpickle, 'r')
         alldata = pickle.load(fileObject)
         # definition from above
-       #                      0          1                 2      3        4           5            6         7         8           9         10
-       # output_meta_data = [field[0], objid_unique[i], ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont, config_pars]
+       #                      0          1                 2           3        4                   
+       # output_meta_data = [field[0], objid_unique[i], fitresults, flagcont, config_pars]
         field = alldata[0]
         objid_unique = alldata[1]
-        ra_obj = alldata[2]
-        dec_obj = alldata[3]
-        a_image_obj = alldata[4]
-        b_image_obj = alldata[5]
-        jmag_obj = alldata[6]
-        hmag_obj = alldata[7]
         fitresults = alldata[8]
         flagcont = alldata[9]
         # config_pars = alldata[10] ## not used here.
 
-        WriteToCatalog(linelistoutfile, field, objid_unique, ra_obj, dec_obj,
-                       a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont)
+        WriteToCatalog(linelistoutfile, field, objid_unique,  fitresults, flagcont)
