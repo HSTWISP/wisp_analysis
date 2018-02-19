@@ -438,18 +438,19 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     plt.draw()
 
 
-def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zeros, g141zeros, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_wisp_data = ' '):
+def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_data = ' '):
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
     outdir = 'Par%s_output_%s'%(par,user) 
-    if path_to_wisp_data ==  ' ': 
-        specnameg102 = 'Par%i_G102_BEAM_%iA.dat' % (par, obj)
-        specnameg141 = 'Par%i_G141_BEAM_%iA.dat' % (par, obj)
+    if path_to_data ==  ' ': 
+        specnameg102 = '%s_%s_G102.1D.dat' % (par, obj)
+        specnameg141 = '%s_%s_G141.1D.dat' % (par, obj)
     else : 
-        specnameg102 = path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par%i_G102_BEAM_%iA.dat' % (par, obj)
-        specnameg141 = path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par%i_G141_BEAM_%iA.dat' % (par, obj) 
-    plottitle = 'Par%i_BEAM_%i' % (par, obj)
+        specnameg102 = path_to_data + '/1D/' + '%s_%s_G102.1D.dat' % (par, obj)
+        specnameg141 = path_to_data + '/1D/' + '%s_%s_G141.1D.dat' % (par, obj)
+
+    plottitle = '3DHST_%s_%s' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
     # read in 1D spectrum
     availgrism = ''
@@ -472,13 +473,13 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # display the object
     if g102zeros is not None:
         #show2dNEW('G102', par, obj, g102firsts, g102zeros, 'linear')
-        show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
+        show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_data)
     if g141zeros is not None:
-        show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
+        show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_data)
     # pan full images to the new object
     showDirectNEW(obj, par, path_to_wisp_data = path_to_wisp_data)
     if show_dispersed:
-        showDispersed(obj, par, path_to_wisp_data = path_to_wisp_data)
+        showDispersed(obj, par, path_to_data = path_to_data)
 
     # define parameters for this object
     ra = objinfo['ra']
@@ -525,14 +526,16 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     s = np.argsort(ston_found)
     # reverse s/n order
 
-    ston_found = ston_found[s[::-1]]
-    lamlines_found = lamlines_found[s[::-1]]
-    index_of_strongest_line = 0
-    lamline = lamlines_found[index_of_strongest_line]
-    zguess = lamline / lam_Halpha - 1
+    #ston_found = ston_found[s[::-1]]
+    #lamlines_found = lamlines_found[s[::-1]]
+    #index_of_strongest_line = 0
+    #lamline = lamlines_found[index_of_strongest_line]
+    #zguess = lamline / lam_Halpha - 1
     # fwhm is defined for the red side, regardless of where line is
-    fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
 
+    fwhm_guess = 2.35 * 4 * config_pars['dispersion_red']
+    zguess = XXXXXX 
+    
 
     if stored_fits != False:
         first_stored_fit = stored_fits[0]
@@ -1024,16 +1027,16 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
+def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
         for k,v in setcolors.iteritems():
             setcolors[k] = '\033[0m'
 
-    if path_to_wisp_data == ' ': 
+    if path_to_data == ' ': 
         ### running from the Spectra directory 
-        path_to_wisp_data = '../../' 
+        path_to_data = './' 
 
 
     if path_to_stored_fits == ' ': 
@@ -1057,39 +1060,40 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
 
     #### STEP 1:   get linelist ###############################################
     ###########################################################################
-    if linelistfile == " ":
-        files = glob('linelist/Par*lines.dat')
-        if len(files) == 0:
-            print_prompt('No line list file found', prompt_type='interim')
-            return 0
-        else:
-            linelistfile = files[0]
-    if not os.path.exists(linelistfile):
-        print_prompt("Invalid path to line list file: %s" % (linelistfile), prompt_type='interim')
-        return 0
-    else:
-        print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
+    #if linelistfile == " ":
+    #    files = glob('linelist/Par*lines.dat')
+    #    if len(files) == 0:
+    #        print_prompt('No line list file found', prompt_type='interim')
+    #        return 0
+    #    else:
+    #        linelistfile = files[0]
+    #if not os.path.exists(linelistfile):
+    #    print_prompt("Invalid path to line list file: %s" % (linelistfile), prompt_type='interim')
+    #    return 0
+    #else:
+    #    print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
+
+    linelistfile =  path_to_data + '/selected.fits'
 
     #### STEP 1b:   read the list of candidate lines  ####################
     ###########################################################################
     
-    llin = asciitable.read(linelistfile, names=[
-                           'parnos', 'grism', 'objid', 'wavelen', 'npix', 'ston'])
-    parnos = llin['parnos']
-    grism = llin['grism']
-    objid = llin['objid']
-    wavelen = llin['wavelen']
-    npix = llin['npix']
-    ston = llin['ston']
-    objid_unique = np.unique(objid)
-    par = parnos[0]
+   
+    hdu = fits.open(linelistfile) 
+    llin =  = hdu[1].data 
+
+    field = llin['field'] 
+    grism = ['G141'] * len(field) 
+    objid = llin['id'] 
+    z = llin['z_best'] 
+    wavelen =  5007 * (1+z) 
+
 
 
 
     #### STEP 2:  set user name and output directory #########################
     ###########################################################################
-    tmp = glob(path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par*BEAM*.dat')[0]
-    print_prompt('You are about to inspect emission lines identified in {}'.format(par), prompt_type='interim')
+    print_prompt('You are about to inspect emission lines identified in 3D HST', prompt_type='interim')
     print_prompt('Please enter your name or desired username', prompt_type='interim')
     while True:
         user = raw_input('> ')
@@ -1100,7 +1104,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
             break
     user = user.strip().lower()
     # create output directory
-    outdir = 'Par%s_output_%s'%(par,user)
+    outdir = '3DHST_output_%s'%user
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
 
@@ -1111,9 +1115,8 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
     if not os.path.exists(os.path.join(outdir,'fitdata')):
         os.makedirs(os.path.join(outdir,'fitdata'))
 
-    parts = os.path.splitext(os.path.basename(linelistfile))
-    linelistoutfile = os.path.join(outdir,'%s_catalog_%s.dat'%(parts[0],user))
-    commentsfile = os.path.join(outdir,'%s_comments_%s.dat'%(parts[0],user))
+    linelistoutfile = os.path.join(outdir,'3DHST_catalog_%s.dat'%user)
+    commentsfile = os.path.join(outdir,'3DHST_comments_%s.dat'%user)
     # the file that will be used to determine which objects are "done"
     donefile = outdir+ '/done_%s'%user
 
@@ -1132,7 +1135,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
             # then reset the database tables.
             # All Par numbers in the putative line list file should be the same, so the zeroth
             # element corresponds to the current field ID.
-            #databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(parnos[0])))
+            #databaseManager = WDBM(dbFileNamePrefix=os.path.join(outdir,'Par{}'.format(field[0])))
             #databaseManager.resetDatabaseTables()
         else:
             # an object may be written to the comment file before it has
@@ -1146,87 +1149,51 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
 
     #### STEP 4: create trace.reg files ############################
     #########################################################################
-    trace102 = open(path_to_wisp_data + '/Par'  + str(par) + '/Spectra/G102_trace.reg', 'w')
-    trace102.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
-    trace102.write('wcs;\n')
+    #trace102 = open(path_to_data  + '/G102_trace.reg', 'w')
+    #trace102.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
+    #trace102.write('wcs;\n')
     # sensitivity drops below 25% of max at wave < 8250 and wave > 11540
     # so box should be 3290 angstroms wide and be centered at 9895.
-    trace102.write('box(9895,0,3290,1,1.62844e-12)\n')
-    trace102.close()
-    trace141 = open(path_to_wisp_data + '/Par' + str(par) + '/Spectra/G141_trace.reg', 'w')
-    trace141.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
-    trace141.write('wcs;\n')
+    #trace102.write('box(9895,0,3290,1,1.62844e-12)\n')
+    #trace102.close()
+    #trace141 = open(path_to_data + '/G141_trace.reg', 'w')
+    #trace141.write('global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\n')
+    #trace141.write('wcs;\n')
     # sensitivity drops below 25% of max at wave < 10917 and wave > 16904
     # so box should be 5897 angstroms wide and be centered at 13910.5
-    trace141.write('box(13910.5,0,5897,1,0)\n')
-    trace141.close()
+    #trace141.write('box(13910.5,0,5897,1,0)\n')
+    #trace141.close()
 
     #### STEP 5:  Get zero and first order positions; unpack them ###########
     #########################################################################
-    g102zeroordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G102_0th.reg'
-    g102firstordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G102_1st.reg'
-    g141zeroordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G141_0th.reg'
-    g141firstordreg = path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/G141_1st.reg'
+    #### IN WISP, we make these as part of the pipeline and they live in the data directory with the full frame images 
+    #g102zeroordreg = path_to_data +'/G102_0th.reg'
+    #g102firstordreg = path_to_data  +'/G102_1st.reg'
+    #g141zeroordreg = path_to_data  + '/G141_0th.reg'
+    #g141firstordreg = path_to_data + '/G141_1st.reg'
 
-    #### STEP 6:  Get object information from SExtractor catalog ############
-    #########################################################################
-    # a_image will give an order of magnitude estimate on the FWHM of the line
-    #   this determines the initial guess and sets an upper limit on how broad
-    #   it can be.
-    # ra/dec, b_image, jmag, jerr, hmag, herr will be carried forward into
-    #   the output linelist.
-    # find all available cats
-    secats = glob(path_to_wisp_data + '/Par' + str(par) + '/DATA/DIRECT_GRISM/fin_F*.cat')
-    secats.sort()
-    cat = asciitable.read(secats[0])
-    beam = cat['col2']
-    a_image = cat['col5']
-    b_image = cat['col6']
-    ra = cat['col8']
-    dec = cat['col9']
-    # which filter is this?
-    if os.path.basename(secats[0]) == 'fin_F110.cat':
-        jmag = cat['col13']
-        jerr = cat['col14']
-        # in case there is a F110-only field
-        hmag = np.ones(ra.shape, dtype=float) * 99.
-        herr = np.ones(ra.shape, dtype=float) * 99.
-    else:
-        jmag = np.ones(ra.shape, dtype=float) * 99.
-        jerr = np.ones(ra.shape, dtype=float) * 99.
-        hmag = cat['col13']
-        herr = cat['col14']
-    # read in second file if there are two
-    if len(secats) == 2:
-        cat2 = asciitable.read(secats[1])
-        # second catalog should be hband
-        hmag = cat2['col13']
-        herr = cat2['col14']
-    objtable = Table([beam, ra, dec, a_image, b_image, jmag, jerr, hmag, herr],
-                     names=('obj', 'ra', 'dec', 'a_image', 'b_image', 'jmag',
-                            'jerr', 'hmag', 'herr'))
-
+    
     #### STEP 7:  Set up initial ds9 display ################################
     #########################################################################
-    if os.path.exists(g102zeroordreg):
-        g102zeroarr = getzeroorders(g102zeroordreg, g='G102')
-        # nothing is done with the first orders anymore
-        # g102firstarr=getfirstorders(g102firstordreg)
-        show2dNEW('G102', parnos[0], objid_unique[0], g102zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
-    else:
-        g102zeroarr = None
-        g102firstarr = None
-    if os.path.exists(g141zeroordreg):
-        g141zeroarr = getzeroorders(g141zeroordreg, g='G102')
-        # g141firstarr=getfirstorders(g141firstordreg)
-        show2dNEW('G141', parnos[0], objid_unique[0], g141zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
-    else:
-        g141zeroarr = None
-        g141firstarr = None
+    #if os.path.exists(g102zeroordreg):
+    #    g102zeroarr = getzeroorders(g102zeroordreg, g='G102')
+    #    # nothing is done with the first orders anymore
+    #    # g102firstarr=getfirstorders(g102firstordreg)
+    #    show2dNEW('G102', field[0], objid_unique[0], g102zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
+    #else:
+    #    g102zeroarr = None
+    #    g102firstarr = None
+    #if os.path.exists(g141zeroordreg):
+    #    g141zeroarr = getzeroorders(g141zeroordreg, g='G102')
+    #    # g141firstarr=getfirstorders(g141firstordreg)
+    #    show2dNEW('G141', field[0], objid_unique[0], g141zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
+    #else:
+    #    g141zeroarr = None
+    #    g141firstarr = None
 
-    showDirectNEW(objid_unique[0], parnos[0], load_image=True, path_to_wisp_data = path_to_wisp_data)
-    if show_dispersed:  # MB
-        showDispersed(objid_unique[0], parnos[0], load_image=True, path_to_wisp_data  = path_to_wisp_data)
+    #showDirectNEW(objid_unique[0], field[0], load_image=True, path_to_wisp_data = path_to_wisp_data)
+    #if show_dispersed:  # MB
+    #    showDispersed(objid_unique[0], field[0], load_image=True, path_to_wisp_data  = path_to_wisp_data)
 
     #### STEP 8:  Loop through objects ############
     #########################################################################
@@ -1293,7 +1260,8 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         ston_found = ston[wlinelist]
         wcatalog = np.where(objtable['obj'] == next_obj)
         objinfo = objtable[wcatalog]
-        #inspect_object(user, parnos[0], next_obj, objinfo, lamlines_found, 
+       
+       #inspect_object(user, field[0], next_obj, objinfo, lamlines_found, 
         #               ston_found, g102zeroarr, g141zeroarr, linelistoutfile, 
         #               commentsfile, remaining_objects, allobjects,
         #               show_dispersed=show_dispersed)
@@ -1301,55 +1269,28 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         if (use_stored_fits == True):
             ### get pickle files: 
             inpickles = [] 
-            path_pickle1 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_mbagley/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
-            path_pickle2 = path_to_stored_fits + '/Par'  + str(parnos[0]) +    '_output_marc/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle3 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_claudia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle4 = path_to_stored_fits + '/Par'  + str(parnos[0]) +     '_output_ben/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle5 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_vihang/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle6 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_ivano/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle7 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mbeck/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle8 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_karlenoid/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle9 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mjr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
-            path_pickle10 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_sophia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle1 = path_to_stored_fits + '3DHST_output_alaina/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
+            path_pickle2 = path_to_stored_fits + '3DHST_output_marc/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
 
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1) 
             if os.path.exists(path_pickle2): 
                 inpickles.append(path_pickle2) 
-            if os.path.exists(path_pickle3): 
-                inpickles.append(path_pickle3)  
-            if os.path.exists(path_pickle4): 
-                inpickles.append(path_pickle4) 
-            if os.path.exists(path_pickle5): 
-                inpickles.append(path_pickle5) 
-            if os.path.exists(path_pickle6): 
-                inpickles.append(path_pickle6) 
-            if os.path.exists(path_pickle7): 
-                inpickles.append(path_pickle7) 
-            if os.path.exists(path_pickle8): 
-                inpickles.append(path_pickle8)  
-            if os.path.exists(path_pickle9): 
-                inpickles.append(path_pickle9) 
-            if os.path.exists(path_pickle10): 
-                inpickles.append(path_pickle10) 
- 
+
             if len(inpickles) == 0:
                 use_stored_fits = False 
 
-                
-            
-        if use_stored_fits == True:
-             inspect_object(user, parnos[0], next_obj, objinfo, 
-                                lamlines_found, ston_found, g102zeroarr, 
-                                g141zeroarr, linelistoutfile, commentsfile, 
+            inspect_object(user, field[0], next_obj, objinfo, 
+                                lamlines_found, ston_found, linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
-                                 show_dispersed=show_dispersed, stored_fits = inpickles, path_to_wisp_data = path_to_wisp_data) 
+                                 show_dispersed=show_dispersed, stored_fits = inpickles, path_to_data = path_to_data) 
+             
+
         else: 
-            inspect_object(user, parnos[0], next_obj, objinfo, 
-                            lamlines_found, ston_found, g102zeroarr, 
-                            g141zeroarr, linelistoutfile, commentsfile, 
+            inspect_object(user, field[0], next_obj, objinfo, 
+                            lamlines_found, ston_found, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
-                            show_dispersed=show_dispersed, stored_fits = False, path_to_wisp_data = path_to_wisp_data) 
+                            show_dispersed=show_dispersed, stored_fits = False, path_to_data = path_to_data) 
 
         objid_done = np.append(objid_done, next_obj)
         remaining_objects = get_remaining_objects(objid_unique, objid_done)
@@ -1374,15 +1315,13 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
                     wcatalog = np.where(objtable['obj'] == next_obj)
                     objinfo = objtable[wcatalog]
                     if (use_stored_fits ==True): 
-                        inspect_object(user, parnos[0], next_obj, objinfo, 
-                                       lamlines_found, ston_found, g102zeroarr, 
-                                       g141zeroarr, linelistoutfile, commentsfile, 
+                        inspect_object(user, field[0], next_obj, objinfo, 
+                                       lamlines_found, ston_found, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
                                        show_dispersed=show_dispersed, stored_fits = inpickles) 
                     else: 
-                        inspect_object(user, parnos[0], next_obj, objinfo, 
-                                       lamlines_found, ston_found, g102zeroarr, 
-                                       g141zeroarr, linelistoutfile, commentsfile, 
+                        inspect_object(user, field[0], next_obj, objinfo, 
+                                       lamlines_found, ston_found, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
                                        show_dispersed=show_dispersed, stored_fit = False) 
 
@@ -1415,8 +1354,8 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         os.unlink('G141_trace.reg')
 
 
-# parnos, objid are scalar not array.
-def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, contamflags):
+# field, objid are scalar not array.
+def writeToCatalog(catalogname, field, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, contamflags):
     if not os.path.exists(catalogname):
         cat = open(catalogname, 'w')
         cat.write('#1  ParNo\n')
@@ -1478,7 +1417,7 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
 #    else:
 #        cat = open(catalogname, 'a')
 
-    outstr = '{:<8d}'.format(parnos) + \
+    outstr = '{:<8d}'.format(field) + \
         '{:<6d}'.format(objid) +\
         '{:<12.6f}'.format(ra_obj[0]) + \
         '{:<12.6f}'.format(dec_obj[0]) + \
@@ -1533,7 +1472,7 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
 
     """
     # if a row already exists for this object, comment it out
-    objstr = '{:<8d}'.format(parnos) + '{:<6d}'.format(objid)
+    objstr = '{:<8d}'.format(field) + '{:<6d}'.format(objid)
     for line in fileinput.input(catalogname, inplace=True):
         if objstr in line:
             print "#%s" % line,
@@ -1564,13 +1503,13 @@ def writeFitdata(filename, lam, flux, eflux, contam, zero, fit, continuum, masks
                      position_char='#', delimiter_pad=' ')
 
 
-def writeComments(filename, parnos, objid, comment):
+def writeComments(filename, field, objid, comment):
     if os.path.exists(filename) == False:
         cat = open(filename, 'w')
     else:
         cat = open(filename, 'a')
 
-    outstr = '{:<8d}'.format(parnos) + \
+    outstr = '{:<8d}'.format(field) + \
         '{:<6d}'.format(objid) +\
         comment + '\n'
 
@@ -1595,8 +1534,8 @@ def UpdateCatalog(linelistoutfile):
         alldata = pickle.load(fileObject)
         # definition from above
        #                      0          1                 2      3        4           5            6         7         8           9         10
-       # output_meta_data = [parnos[0], objid_unique[i], ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont, config_pars]
-        parnos = alldata[0]
+       # output_meta_data = [field[0], objid_unique[i], ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont, config_pars]
+        field = alldata[0]
         objid_unique = alldata[1]
         ra_obj = alldata[2]
         dec_obj = alldata[3]
@@ -1608,5 +1547,5 @@ def UpdateCatalog(linelistoutfile):
         flagcont = alldata[9]
         # config_pars = alldata[10] ## not used here.
 
-        WriteToCatalog(linelistoutfile, parnos, objid_unique, ra_obj, dec_obj,
+        WriteToCatalog(linelistoutfile, field, objid_unique, ra_obj, dec_obj,
                        a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, flagcont)

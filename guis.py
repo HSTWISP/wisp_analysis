@@ -308,7 +308,7 @@ def showDispersed(obid, parno, load_image=False, path_to_wisp_data = ' '):  # MB
 
 
 
-### AH: 1/26/28: I do not think we are using this? 
+### AH: 1/26/18: I do not think we are using this? 
 def createAltGrismRegion(grism):
     workingdir=os.getcwd()
     par = os.path.dirname(workingdir)
