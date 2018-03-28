@@ -47,7 +47,6 @@ import matplotlib.patheffects as PathEffects
 # on OSX
 import readline
 # SQLLite database support for data persistence
-from WISPLFDatabaseManager import WISPLFDatabaseManager as WDBM
 
 from wisp_analysis import *
 
@@ -442,13 +441,14 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
-    outdir = 'Par%s_output_%s'%(par,user) 
+    outdir = '3DHST_output_%s'%user 
     if path_to_data ==  ' ': 
         specnameg102 = '%s_%s_G102.1D.dat' % (par, obj)
         specnameg141 = '%s_%s_G141.1D.dat' % (par, obj)
     else : 
         specnameg102 = path_to_data + '/1D/' + '%s_%s_G102.1D.dat' % (par, obj)
         specnameg141 = path_to_data + '/1D/' + '%s_%s_G141.1D.dat' % (par, obj)
+
 
     plottitle = '3DHST_%s_%s' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
@@ -468,28 +468,23 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
     else:
         tab_red = None
 
+
     availgrism = 'both' if availgrism == 'g102g141' else availgrism
 
     # display the object
-    if g102zeros is not None:
-        #show2dNEW('G102', par, obj, g102firsts, g102zeros, 'linear')
-        show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_data)
-    if g141zeros is not None:
-        show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_data)
+    #if g102zeros is not None:
+     #   #show2dNEW('G102', par, obj, g102firsts, g102zeros, 'linear')
+     #   show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_data)
+    #if g141zeros is not None:
+     #   show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_data)
     # pan full images to the new object
-    showDirectNEW(obj, par, path_to_wisp_data = path_to_wisp_data)
-    if show_dispersed:
-        showDispersed(obj, par, path_to_data = path_to_data)
+    #showDirectNEW(obj, par, path_to_wisp_data = path_to_wisp_data)
+    #if show_dispersed:
+    #    showDispersed(obj, par, path_to_data = path_to_data)
 
-    # define parameters for this object
-    ra = objinfo['ra']
-    dec = objinfo['dec']
-    a_image = objinfo['a_image']
-    b_image = objinfo['b_image']
-    jmag = objinfo['jmag']
-    jerr = objinfo['jerr']
-    hmag = objinfo['hmag']
-    herr = objinfo['herr']
+
+
+
 
     # start with a fresh set of config pars
     config_pars = read_config('default.config', availgrism=availgrism)
@@ -528,7 +523,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
     #ston_found = ston_found[s[::-1]]
     #lamlines_found = lamlines_found[s[::-1]]
-    #index_of_strongest_line = 0
+    index_of_strongest_line = 0
     #lamline = lamlines_found[index_of_strongest_line]
     #zguess = lamline / lam_Halpha - 1
     # fwhm is defined for the red side, regardless of where line is
@@ -1081,14 +1076,13 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
     
    
     hdu = fits.open(linelistfile) 
-    llin =  = hdu[1].data 
+    llin = hdu[1].data 
 
     field = llin['field'] 
     grism = ['G141'] * len(field) 
     objid = llin['id'] 
     z = llin['z_best'] 
     wavelen =  5007 * (1+z)
-
 
 
 
@@ -1278,16 +1272,18 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
                 inpickles.append(path_pickle2) 
 
             if len(inpickles) == 0:
-                use_stored_fits = False 
+                use_stored_fits = False
 
-            inspect_object(user, field[0], next_obj, zguess_obj, 
+
+
+            inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                 lamlines_found,  linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
                                  show_dispersed=show_dispersed, stored_fits = inpickles, path_to_data = path_to_data) 
              
 
         else: 
-            inspect_object(user, field[0], next_obj, zguess_obj, 
+            inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                             lamlines_found, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
                             show_dispersed=show_dispersed, stored_fits = False, path_to_data = path_to_data) 
@@ -1313,12 +1309,12 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
                     lamlines_found = wavelen[wlinelist]
                     zguess_obj = z[wlinelist]
                     if (use_stored_fits ==True): 
-                        inspect_object(user, field[0], next_obj, zguess_obj, 
+                        inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                        lamlines_found, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
                                        show_dispersed=show_dispersed, stored_fits = inpickles) 
                     else: 
-                        inspect_object(user, field[0], next_obj, zguess_obj, 
+                        inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                        lamlines_found, linelistoutfile, commentsfile, 
                                        remaining_objects, allobjects, 
                                        show_dispersed=show_dispersed, stored_fit = False) 
