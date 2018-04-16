@@ -172,6 +172,7 @@ def print_help_message():
         "\tac = accept object fit, noting contamination\n"  \
         "\tr = reject object\n" \
         "\tc = add comment\n" \
+        "\tuser = toggle between previously saved fits"
         "\tcontam = specify contamination to line flux and/or continuum\n" \
         "\treset = reset interactive options back to default for this object\n" \
         "\ts = print the (in progress) object summary\n\n"
@@ -533,18 +534,22 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     # fwhm is defined for the red side, regardless of where line is
     fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
 
-
+    
     if stored_fits != False:
         first_stored_fit = stored_fits[0]
+        users = [path.split('/')[-3].split('_')[-1] for path in stored_fits]
         fileObject = open(first_stored_fit,'r')
         alldata = pickle.load(fileObject)
         config_pars = alldata[10]
         fitresults_old = alldata[8]
         zguess = fitresults_old['redshift']
         fwhm_guess = fitresults_old['fwhm_g141']
-            ### also need to figure out what else to add? 
+        print 'using stored fit from: '  + users[0]
+        print 'available stored fits: ' 
+        print users
+        ### also need to figure out what else to add? 
             ### config pars for nodes can also be entered here. 
-
+  
 
 
 ### replace this with printouts from pickle files
@@ -748,7 +753,31 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                 node_arr = np.array(node_arr)
                 # sort by wavelength
                 node_arr = np.sort(node_arr)
-                config_pars['node_wave'] = node_arr 
+                config_pars['node_wave'] = node_arr
+
+
+        elif option.strip().lower() == 'user':
+
+            if stored_fits !=  False: 
+                print_prompt("Enter name of user for toggling between stored fits") 
+                user_input = raw_input("> ")
+                try:
+                    w = users.index(user_input)
+                except ValueError: 
+                    print_prompt('Invalid entry. Enter a valid user name.') 
+
+                different_stored_fit = stored_fits[w]
+                fileObject = open(different_stored_fit,'r')
+                alldata = pickle.load(fileObject)
+                config_pars = alldata[10]
+                fitresults_old = alldata[8]
+                zguess = fitresults_old['redshift']
+                fwhm_guess = fitresults_old['fwhm_g141']
+            else: 
+                print 'there are no stored fits!' 
+
+            
+
 
 
         # reset all options
@@ -1040,10 +1069,13 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         use_stored_fits  = False 
     elif os.path.exists(path_to_stored_fits) : 
         use_stored_fits = True 
+        print 'looking for stored fit data' 
     else: 
-        use_stored_fits = False 
+        use_stored_fits = False
+        print 'not using stored fit data'
     
-      
+     
+    
     #### STEP 0:   set ds9 window to tile mode ################################
     ###########################################################################
     # not the best way to do this, but matching the method in guis.py
@@ -1233,7 +1265,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
     remaining_objects = get_remaining_objects(objid_unique, objid_done)
     allobjects = [unique_obj for unique_obj in objid_unique]
 
-    print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n', prompt_type='interim')
+    print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\th = help/list interactive commands\n\tq = quit\n', prompt_type='interim')
 
     while remaining_objects.shape[0] > 0:
         ndone = len(np.unique(objid_done))
@@ -1312,22 +1344,24 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
             path_pickle9 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mjr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
             path_pickle10 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_sophia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
 
+
+
             if os.path.exists(path_pickle1): 
-                inpickles.append(path_pickle1) 
+                inpickles.append(path_pickle1)  
             if os.path.exists(path_pickle2): 
-                inpickles.append(path_pickle2) 
+                inpickles.append(path_pickle2)  
             if os.path.exists(path_pickle3): 
-                inpickles.append(path_pickle3)  
+                inpickles.append(path_pickle3) 
             if os.path.exists(path_pickle4): 
                 inpickles.append(path_pickle4) 
             if os.path.exists(path_pickle5): 
                 inpickles.append(path_pickle5) 
             if os.path.exists(path_pickle6): 
-                inpickles.append(path_pickle6) 
+                inpickles.append(path_pickle6)  
             if os.path.exists(path_pickle7): 
                 inpickles.append(path_pickle7) 
             if os.path.exists(path_pickle8): 
-                inpickles.append(path_pickle8)  
+                inpickles.append(path_pickle8) 
             if os.path.exists(path_pickle9): 
                 inpickles.append(path_pickle9) 
             if os.path.exists(path_pickle10): 
