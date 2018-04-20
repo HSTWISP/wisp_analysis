@@ -176,7 +176,7 @@ def print_help_message():
         "\tcontam = specify contamination to line flux and/or continuum\n" \
         "\treset = reset interactive options back to default for this object\n" \
         "\ts = print the (in progress) object summary\n\n"
-    msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n"  \
+    msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n"  
     msg += setcolors['helpmsg'] + "\tz = enter a different z guess\n" \
         "\tw = enter a different emission line wavelength guess\n" \
         "\tha,  or hb, o31, o32, o2, s2, s31, s32 = change redshift guess\n" \
