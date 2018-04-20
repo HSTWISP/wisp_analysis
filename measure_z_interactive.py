@@ -441,7 +441,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
-    outdir = '3DHST_output_%s'%user 
+    outdir = '%s_output_%s' % (par,user)
     if path_to_data ==  ' ': 
         specnameg102 = '%s_%s_G102.1D.dat' % (par, obj)
         specnameg141 = '%s_%s_G141.1D.dat' % (par, obj)
@@ -450,7 +450,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         specnameg141 = path_to_data + '/1D/' + '%s_%s_G141.1D.dat' % (par, obj)
 
 
-    plottitle = '3DHST_%s_%s' % (par, obj)
+    plottitle = '%s_%s' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
     # read in 1D spectrum
     availgrism = ''
@@ -576,6 +576,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         spec_zer = spdata[4]
         mask_flg = spdata[5]
 
+
         # apply the mask to the wavelength array
         masked_spec_lam = np.ma.masked_where(np.ma.getmask(spec_val), spec_lam)
         # compress the masked arrays for fitting
@@ -591,7 +592,8 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         fitpars_nolines[11] = 1.4  # can't kill this one or divide by zero.
         fitpars_nolines[12] = 0.1
         fitmodel = emissionline_model(fitpars, np.ma.compressed(
-            masked_spec_lam)) * fitresults['fit_scale_factor']
+            masked_spec_lam)) * fitresults['fit_scale_factor'] 
+        print fitmodel.shape
         contmodel = emissionline_model(fitpars_nolines, np.ma.compressed(
             masked_spec_lam)) * fitresults['fit_scale_factor']
         # the fitting is done on compressed arrays, so we need to
@@ -680,7 +682,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         # change the fwhm guess
         elif option.strip().lower() == 'fw':
             print_prompt("Enter a Guess for FWHM in pixels")
-            print_prompt("The current fwhm_fit is:  " + str(fitresults['fwhm_g141'] / config_pars['dispersion_red']) + " and 2*A_image is: " + str(2 * a_image[0]))
+            print_prompt("The default fwhm_fit is 3 pixels:  ")
             try:
                 fwhm_guess = config_pars['dispersion_red'] * float(raw_input("> "))
             except ValueError:
@@ -936,7 +938,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
         # quit this object
         elif option.strip().lower() == 'q':
-            print_prompt('Quitting Obj %i. Nothing saved to file' % (obj))
+            print_prompt('Quitting Obj %s. Nothing saved to file' % (obj))
             print_prompt('-' * 72)
             return 0
 
@@ -966,15 +968,13 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
             #databaseManager.saveCatalogueEntry(databaseManager.layoutCatalogueData(par, obj, ra[0], dec[0], a_image[0],
                                                                               #     b_image[0], jmag[0], hmag[0], fitresults, flagcont))
 
-            writeToCatalog(linelistoutfile, par, obj, ra, dec, a_image,
-                           b_image, jmag, hmag, fitresults, contamflags)
+            writeToCatalog(linelistoutfile, par, obj, fitresults, contamflags)
 
             writeFitdata(fitdatafilename, spec_lam, spec_val, spec_unc,
                          spec_con, spec_zer, full_fitmodel, full_contmodel, mask_flg)
 
             fitspec_pickle = open(fitdatafilename + '.pickle', 'wb')
-            output_meta_data = [par, obj, ra, dec, a_image, b_image,
-                                jmag, hmag, fitresults, flagcont, config_pars]
+            output_meta_data = [par, obj, fitresults, flagcont, config_pars]
             pickle.dump(output_meta_data, fitspec_pickle)
             fitspec_pickle.close()
        # else :
@@ -996,7 +996,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
             f = open(outdir + '/done_%s'%user, 'w')
         else:
             f = open(outdir + '/done_%s'%user, 'a')
-        f.write('%i\n' % obj)
+        f.write(obj + '\n')
         f.close()
 
 
@@ -1023,7 +1023,7 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
+def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
@@ -1060,7 +1060,7 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
     #    files = glob('linelist/Par*lines.dat')
     #    if len(files) == 0:
     #        print_prompt('No line list file found', prompt_type='interim')
-    #        return 0
+    #       return 0
     #    else:
     #        linelistfile = files[0]
     #if not os.path.exists(linelistfile):
@@ -1069,7 +1069,7 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
     #else:
     #    print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
 
-    linelistfile =  path_to_data + '/selected.fits'
+    linelistfile =  path_to_data + '/selected_updated.fits'
 
     #### STEP 1b:   read the list of candidate lines  ####################
     ###########################################################################
@@ -1079,10 +1079,35 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
     llin = hdu[1].data 
 
     field = llin['field'] 
-    grism = ['G141'] * len(field) 
     objid = llin['id'] 
     z = llin['z_best'] 
-    wavelen =  5007 * (1+z)
+    wavelen =  5007 * (1+z) 
+    
+
+    if dofield == 'GOODSN': 
+        w=np.where(field == 'GOODS-N') 
+        w=w[0] 
+        field = field[w] 
+        objid = objid[w]
+        z = z[w] 
+        wavelen = wavelen[w] 
+    if dofield == 'GOODSS': 
+        w=np.where(field ==  'GOODS-S') 
+        w=w[0] 
+        field = field[w] 
+        objid = objid[w]
+        z = z[w] 
+        wavelen = wavelen[w]
+    elif ((dofield != 'GOODSS') & (dofield != 'GOODSN')): 
+        w=np.where(field ==  dofield) 
+        w=w[0] 
+        field = field[w] 
+        objid = objid[w]
+        z = z[w] 
+        wavelen = wavelen[w]
+
+
+
 
 
 
@@ -1100,7 +1125,7 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
             break
     user = user.strip().lower()
     # create output directory
-    outdir = '3DHST_output_%s'%user
+    outdir = '%s_output_%s'% (dofield, user)
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
 
@@ -1263,8 +1288,8 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ', show_dispersed=T
         if (use_stored_fits == True):
             ### get pickle files: 
             inpickles = [] 
-            path_pickle1 = path_to_stored_fits + '3DHST_output_alaina/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
-            path_pickle2 = path_to_stored_fits + '3DHST_output_marc/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle1 = path_to_stored_fits + dofield + '_output_alaina/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
+            path_pickle2 = path_to_stored_fits + dofiekd + '_output_marc/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
 
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1) 
@@ -1405,8 +1430,8 @@ def writeToCatalog(catalogname, field, objid, fitresults, contamflags):
 #    else:
 #        cat = open(catalogname, 'a')
 
-    outstr = '{:<8d}'.format(field) + \
-        '{:<6d}'.format(objid) +\
+     
+    outstr = field +   '     '  + objid +\
         '{:>8.4f}'.format(fitresults['redshift']) + \
         '{:>10.4f}'.format(fitresults['redshift_err']) +\
         '{:>10.4f}'.format(fitresults['dz_oiii'])  + \
@@ -1491,8 +1516,7 @@ def writeComments(filename, field, objid, comment):
     else:
         cat = open(filename, 'a')
 
-    outstr = '{:<8d}'.format(field) + \
-        '{:<6d}'.format(objid) +\
+    outstr = field + '      ' + objid + '   '  +\
         comment + '\n'
 
     cat.write(outstr)

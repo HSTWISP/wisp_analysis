@@ -273,6 +273,7 @@ def fit_obj(input_list):
     #### set dz as the range of wavelengths over which we limit z, can change. 
     dz = config_pars['delta_z']  ### this is the maximum shift from the line list redshift/best estimate.  
     scl = 1e-18    ### the fitter works best when numbers are not too large/small.
+    #scl = 1.0
     ### guess the wavelengths of the lines.   
     ### in real data, this will come from a peak pixel estimate of the line center
     ### which we'll get from the process of finding the line.       
@@ -320,8 +321,12 @@ def fit_obj(input_list):
   #        | ((lam_spec > siii_9532_obs + line_mask) & (lam_spec < siii_9532_obs + fit_region)))
     
     ### low/high regions to ignore for sure. 
-    mask_spec = lam_spec * 0.
+    mask_spec = lam_spec * 0. 
+    print len(lam_spec)
+    print z_in
+    print oii_obs, fit_region, he1_obs 
     w=np.where((lam_spec < oii_obs - fit_region) | (lam_spec > he1_obs + fit_region))   
+    print w
     mask_spec[w] = 1.   
 
     w=np.where( (lam_spec > ha_obs - line_mask) & (lam_spec < sii_obs + line_mask )) 

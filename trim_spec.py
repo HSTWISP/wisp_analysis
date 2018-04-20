@@ -80,6 +80,7 @@ def trim_spec(tbdata_blue, tbdata_red, config_pars, mask_zeros=False, return_mas
 
         ### only fit finite data
         flux_spec_blue = np.ma.masked_where(np.logical_or(~(np.isfinite(flux_spec_blue)),~(np.isfinite(error_spec_blue))), flux_spec_blue)
+        flux_spec_blue = np.ma.masked_where(flux_spec_blue == 0.0, flux_spec_blue) 
         error_spec_blue = newmask(error_spec_blue, flux_spec_blue)
         contam_spec_blue = newmask(contam_spec_blue, flux_spec_blue)
 
@@ -95,6 +96,7 @@ def trim_spec(tbdata_blue, tbdata_red, config_pars, mask_zeros=False, return_mas
 
         ### only fit finite data
         flux_spec_red = np.ma.masked_where(np.logical_or(~(np.isfinite(flux_spec_red)),~(np.isfinite(error_spec_red))), flux_spec_red)
+        flux_spec_red = np.ma.masked_where(flux_spec_red == 0.0, flux_spec_red) 
         error_spec_red = newmask(error_spec_red, flux_spec_red)
         contam_spec_red = newmask(contam_spec_red, flux_spec_red)
 
