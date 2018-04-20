@@ -172,7 +172,7 @@ def print_help_message():
         "\tac = accept object fit, noting contamination\n"  \
         "\tr = reject object\n" \
         "\tc = add comment\n" \
-        "\tuser = toggle between previously saved fits"
+        "\tuser = toggle between previously saved fits" \
         "\tcontam = specify contamination to line flux and/or continuum\n" \
         "\treset = reset interactive options back to default for this object\n" \
         "\ts = print the (in progress) object summary\n\n"
