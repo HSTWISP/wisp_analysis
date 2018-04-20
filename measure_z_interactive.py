@@ -145,7 +145,6 @@ def getfirstorders(firstorderpath):
         folen.append(float(linesplit[3][0:-1]))
         # python is weird.
         fowid.append(float(linesplit[-1].split('{')[-1].split('}')[0]))
-    print foid
     t = Table([fox, foy, folen, fowid], names=(
         'x', 'y', 'len', 'width', 'objid'))
     return t
@@ -449,6 +448,8 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         specnameg102 = path_to_data + '/1D/' + '%s_%s_G102.1D.dat' % (par, obj)
         specnameg141 = path_to_data + '/1D/' + '%s_%s_G141.1D.dat' % (par, obj)
 
+    
+
 
     plottitle = '%s_%s' % (par, obj)
     fitdatafilename = os.path.join(outdir, 'fitdata/%s_fitspec' % plottitle)
@@ -567,6 +568,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
         # get spectrum for obj. do this every time because sometimes we
         # re-read with a mask or a different transition wavelength
+
         spdata = trim_spec(tab_blue, tab_red, config_pars,
                            mask_zeros=True, return_masks=True)
         spec_lam = spdata[0]
@@ -593,7 +595,6 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         fitpars_nolines[12] = 0.1
         fitmodel = emissionline_model(fitpars, np.ma.compressed(
             masked_spec_lam)) * fitresults['fit_scale_factor'] 
-        print fitmodel.shape
         contmodel = emissionline_model(fitpars_nolines, np.ma.compressed(
             masked_spec_lam)) * fitresults['fit_scale_factor']
         # the fitting is done on compressed arrays, so we need to
@@ -938,8 +939,8 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
         # quit this object
         elif option.strip().lower() == 'q':
-            print_prompt('Quitting Obj %s. Nothing saved to file' % (obj))
-            print_prompt('-' * 72)
+            #print_prompt('Quitting Obj %s. Nothing saved to file' % (obj))
+            #print_prompt('-' * 72)
             return 0
 
         # catch-all for everything else
@@ -1082,29 +1083,19 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS'
     objid = llin['id'] 
     z = llin['z_best'] 
     wavelen =  5007 * (1+z) 
+
+    w=np.where(field =='GOODS-N') 
+    field[w] = 'GOODSN'
+    w=np.where(field == 'GOODS-S') 
+    field[w] = 'GOODSS'
     
 
-    if dofield == 'GOODSN': 
-        w=np.where(field == 'GOODS-N') 
-        w=w[0] 
-        field = field[w] 
-        objid = objid[w]
-        z = z[w] 
-        wavelen = wavelen[w] 
-    if dofield == 'GOODSS': 
-        w=np.where(field ==  'GOODS-S') 
-        w=w[0] 
-        field = field[w] 
-        objid = objid[w]
-        z = z[w] 
-        wavelen = wavelen[w]
-    elif ((dofield != 'GOODSS') & (dofield != 'GOODSN')): 
-        w=np.where(field ==  dofield) 
-        w=w[0] 
-        field = field[w] 
-        objid = objid[w]
-        z = z[w] 
-        wavelen = wavelen[w]
+    w=np.where(field ==  dofield) 
+    w=w[0] 
+    field = field[w] 
+    objid = objid[w]
+    z = z[w] 
+    wavelen = wavelen[w]
 
 
 

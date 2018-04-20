@@ -322,11 +322,7 @@ def fit_obj(input_list):
     
     ### low/high regions to ignore for sure. 
     mask_spec = lam_spec * 0. 
-    print len(lam_spec)
-    print z_in
-    print oii_obs, fit_region, he1_obs 
     w=np.where((lam_spec < oii_obs - fit_region) | (lam_spec > he1_obs + fit_region))   
-    print w
     mask_spec[w] = 1.   
 
     w=np.where( (lam_spec > ha_obs - line_mask) & (lam_spec < sii_obs + line_mask )) 
