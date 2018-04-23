@@ -1117,7 +1117,6 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
     par = parnos[0]
 
 
-
     #### STEP 2:  set user name and output directory #########################
     ###########################################################################
     tmp = glob(path_to_wisp_data + '/Par' + str(par) + '/Spectra/Par*BEAM*.dat')[0]
@@ -1343,6 +1342,8 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
             path_pickle8 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_karlenoid/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
             path_pickle9 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mjr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
             path_pickle10 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_sophia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle11 = '/Volumes/Thunderbay/wisps/mzr_refit/Par'  + str(parnos[0]) + '_output_marc-mzr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle12 = '/Volumes/Thunderbay/wisps/mzr_refit/Par'  + str(parnos[0]) + '_output_alaina-mzr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
 
 
 
@@ -1366,6 +1367,11 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
                 inpickles.append(path_pickle9) 
             if os.path.exists(path_pickle10): 
                 inpickles.append(path_pickle10) 
+            if os.path.exists(path_pickle11): 
+                inpickles.append(path_pickle11) 
+            if os.path.exists(path_pickle12): 
+                inpickles.append(path_pickle12) 
+
  
             if len(inpickles) == 0:
                 use_stored_fits = False 
