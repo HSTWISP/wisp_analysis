@@ -1347,6 +1347,11 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
 
 
 
+            ### put new fits first
+            if os.path.exists(path_pickle11): 
+                inpickles.append(path_pickle11) 
+            if os.path.exists(path_pickle12): 
+                inpickles.append(path_pickle12) 
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1)  
             if os.path.exists(path_pickle2): 
@@ -1367,11 +1372,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
                 inpickles.append(path_pickle9) 
             if os.path.exists(path_pickle10): 
                 inpickles.append(path_pickle10) 
-            if os.path.exists(path_pickle11): 
-                inpickles.append(path_pickle11) 
-            if os.path.exists(path_pickle12): 
-                inpickles.append(path_pickle12) 
-
+            
  
             if len(inpickles) == 0:
                 use_stored_fits = False 
