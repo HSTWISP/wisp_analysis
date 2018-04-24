@@ -165,7 +165,9 @@ def print_help_message():
     Just putting this here to keep it out of the way.
     """
     msg = setcolors['helpmsg'] + "Available Options:\n"
+
     msg += setcolors['heading'] + "\tOBJECT SPECIFIC OPTIONS:\n"
+
     msg += setcolors['helpmsg'] + "\ta = accept object fit\n" \
         "\tac = accept object fit, noting contamination\n"  \
         "\tr = reject object\n" \
@@ -173,8 +175,10 @@ def print_help_message():
         "\tcontam = specify contamination to line flux and/or continuum\n" \
         "\treset = reset interactive options back to default for this object\n" \
         "\ts = print the (in progress) object summary\n\n"
-    msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n"\
-    msg += setcolors['helpmsg'] + "\tz = enter a different z guess\n" \
+
+
+    msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n" 
+    msg += setcolors['helpmsg'] + "\tz = enter a different z guess\n"\
         "\tw = enter a different emission line wavelength guess\n" \
         "\tha,  or hb, o31, o32, o2, s2, s31, s32 = change redshift guess\n" \
         "\tn = skip to next brightest line found in this object\n\n"
@@ -642,6 +646,7 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         # reject object
         if option.strip().lower() == 'r':
             done = 1
+            comment = 'rejected'
             zset = 0
 
         # accept object
@@ -1024,7 +1029,7 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
+def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
@@ -1101,11 +1106,9 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS'
 
 
 
-
-
     #### STEP 2:  set user name and output directory #########################
     ###########################################################################
-    print_prompt('You are about to inspect emission lines identified in 3D HST', prompt_type='interim')
+    print_prompt('You are about to inspect emission lines identified in 3D HST/' +dofield, prompt_type='interim')
     print_prompt('Please enter your name or desired username', prompt_type='interim')
     while True:
         user = raw_input('> ')
@@ -1127,8 +1130,8 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS'
     if not os.path.exists(os.path.join(outdir,'fitdata')):
         os.makedirs(os.path.join(outdir,'fitdata'))
 
-    linelistoutfile = os.path.join(outdir,'3DHST_catalog_%s.dat'%user)
-    commentsfile = os.path.join(outdir,'3DHST_comments_%s.dat'%user)
+    linelistoutfile = os.path.join(outdir, dofield + '_catalog_%s.dat'%user)
+    commentsfile = os.path.join(outdir, dofield+'_comments_%s.dat'%user)
     # the file that will be used to determine which objects are "done"
     donefile = outdir+ '/done_%s'%user
 
@@ -1279,8 +1282,8 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS'
         if (use_stored_fits == True):
             ### get pickle files: 
             inpickles = [] 
-            path_pickle1 = path_to_stored_fits + dofield + '_output_alaina/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
-            path_pickle2 = path_to_stored_fits + dofiekd + '_output_marc/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
+            path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
 
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1) 
@@ -1290,14 +1293,13 @@ def measure_z_interactive(linelistfile=" ", path_to_data = ' ',dofield = 'AEGIS'
             if len(inpickles) == 0:
                 use_stored_fits = False
 
-
+        if (use_stored_fits == True) : 
 
             inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                 lamlines_found,  linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
                                  show_dispersed=show_dispersed, stored_fits = inpickles, path_to_data = path_to_data) 
              
-
         else: 
             inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                             lamlines_found, linelistoutfile, commentsfile, 
