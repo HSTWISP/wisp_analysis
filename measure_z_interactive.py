@@ -555,12 +555,12 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
 ### replace this with printouts from pickle files
 
     # print object info to screen
-#    if rejectPrevFit:
-#        print(' ')
-#        print_prompt("=" * 72)
-#        print_prompt("Par%i Obj %i:" % (par, obj))
-#        print_prompt("Initial redshift guess: z = %f" % (zguess))
-#        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
+    if rejectPrevFit:
+        print(' ')
+        print_prompt("=" * 72)
+        print_prompt("Par%i Obj %i:" % (par, obj))
+        print_prompt("Initial redshift guess: z = %f" % (zguess))
+        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
 
     comment = ' '
     contamflags = {'o2':0, 'hg':0, 'hb':0, 'o3':0, 'ha':0, 's2':0, 's31':0, \
@@ -644,8 +644,15 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
 
         # reject object
         if option.strip().lower() == 'r':
-            done = 1
-            zset = 0
+           plot_object(zguess, fitresults['redshift'],
+                    spdata, config_pars, snr_meas_array, full_fitmodel,
+                    full_contmodel, lamline, lamlines_found, 
+                    index_of_strongest_line, contmodel, plottitle, 
+                    outdir, zset=zset)
+           comment = 'rejected' 
+           writeComments(commentsfile, par, obj, comment)
+           done = 1
+           zset = 0
 
         # accept object
         elif option.strip().lower() == 'a':
