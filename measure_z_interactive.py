@@ -644,15 +644,9 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
 
         # reject object
         if option.strip().lower() == 'r':
-           plot_object(zguess, fitresults['redshift'],
-                    spdata, config_pars, snr_meas_array, full_fitmodel,
-                    full_contmodel, lamline, lamlines_found, 
-                    index_of_strongest_line, contmodel, plottitle, 
-                    outdir, zset=zset)
-           comment = 'rejected' 
-           writeComments(commentsfile, par, obj, comment)
-           done = 1
            zset = 0
+           comment = 'rejected' 
+           done = 1
 
         # accept object
         elif option.strip().lower() == 'a':
