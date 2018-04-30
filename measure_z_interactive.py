@@ -50,6 +50,9 @@ import readline
 
 from wisp_analysis import *
 
+#import matplotlib
+#matplotlib.style.use('classic')
+#matplotlib.use('WXAgg')
 
 #######################################################################
 # define wavelengths of lines of interest
@@ -175,8 +178,6 @@ def print_help_message():
         "\tcontam = specify contamination to line flux and/or continuum\n" \
         "\treset = reset interactive options back to default for this object\n" \
         "\ts = print the (in progress) object summary\n\n"
-
-
     msg += setcolors['heading'] + "\tEMISSION LINE SPECIFIC OPTIONS:\n" 
     msg += setcolors['helpmsg'] + "\tz = enter a different z guess\n"\
         "\tw = enter a different emission line wavelength guess\n" \
@@ -194,9 +195,11 @@ def print_help_message():
         "\tlog = logarithmic\n" \
         "\tzs102 = z1,z2 comma-separated range for G102 zscale\n" \
         "\tzs141 = z1,z2 comma-separated range for G141 zscale\n" \
-        "\tdc = recenter direct images\n" \
-        "\treload = reload direct images\n" \
-        "\tdr = reload direct image reg files\n\n" 
+        "\tzsimJ = z1,z2 comma-separated range for zscale: direct image associated with G102 \n" \
+        "\tzsimH = z1,z2 comma-separated range for zscale: direct image associated with G141\n" \
+      #  "\tdc = recenter direct images\n" \
+      #  "\treload = reload direct images\n" \
+      #  "\tdr = reload direct image reg files\n\n" 
     msg += setcolors['heading'] + "\tSOFTWARE SPECIFIC OPTIONS: \n"
     msg += setcolors['helpmsg'] + "\th = print this message\n" \
         "\tq = quit\n" + setcolors['endc']
@@ -292,6 +295,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
 
     plt.ion()
     fig = plt.figure(1, figsize=(11, 8), dpi=75)
+    #plt.subplots_adjust(bottom =0.5)
     plt.clf()
     gs = gridspec.GridSpec(3, 4)
     ax1 = fig.add_subplot(gs[0:2, :])
@@ -437,6 +441,8 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
              fontsize=18, fontweight=500, 
              path_effects=[PathEffects.withStroke(linewidth=0.5,foreground="k")])
     fig.savefig(plotfilename)
+    #mng = plt.get_current_fig_manager()
+    #mng.window.state('zoomed')
     plt.draw()
 
 
@@ -476,17 +482,41 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
     availgrism = 'both' if availgrism == 'g102g141' else availgrism
 
-    # display the object
-    #if g102zeros is not None:
-     #   #show2dNEW('G102', par, obj, g102firsts, g102zeros, 'linear')
-     #   show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_data)
-    #if g141zeros is not None:
-     #   show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_data)
-    # pan full images to the new object
-    #showDirectNEW(obj, par, path_to_wisp_data = path_to_wisp_data)
-    #if show_dispersed:
-    #    showDispersed(obj, par, path_to_data = path_to_data)
+    g102_2d  = path_to_data +'/2D/'  + par + '_' +  obj + '_G102.2D.fits'  
+    g141_2d =  path_to_data +'/2D/'  + par + '_' +  obj +'_G141.2D.fits' 
 
+    if availgrism == 'both' : 
+        cmd  = 'xpaset -p ds9 tile grid layout 2 2'
+        os.system(cmd)
+
+        if os.path.exists(g102_2d):
+            infits = fits.open(g102_2d) 
+            direct  = infits[1].data 
+            spec = infits[5].data
+            show2dNEW(g102_2d + '[1]', 'linear', frameno = '1', zran1 = -2 * np.std(direct), zran2 = 3 * np.std(direct))
+            show2dNEW(g102_2d + '[5]', 'linear', frameno = '2', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec) ) 
+            infits.close() 
+
+        if os.path.exists(g141_2d): 
+            infits = fits.open(g141_2d) 
+            direct = infits[1].data 
+            spec = infits[5].data 
+            show2dNEW(g141_2d + '[1]', 'linear', frameno = '3',zran1 = -2 * np.std(direct), zran2 = 3 * np.std(direct)  )
+            show2dNEW(g141_2d + '[5]', 'linear', frameno = '4', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec) )
+            infits.close()
+
+    else: 
+        cmd  = 'xpaset -p ds9 tile grid layout 2 1'
+        os.system(cmd)
+
+        if os.path.exists(g141_2d):
+            infits = fits.open(g141_2d) 
+            direct = infits[1].data 
+            spec = infits[5].data 
+            show2dNEW(g141_2d + '[1]', 'linear', frameno = '1', zran1= -2 * np.std(direct), zran2 = 3 * np.std(direct))
+            show2dNEW(g141_2d + '[5]', 'linear', frameno = '2', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec))
+            infits.close()
+   
 
 
 
@@ -540,26 +570,26 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
     if stored_fits != False:
         first_stored_fit = stored_fits[0]
+        users = [path.split('/')[-3].split('_')[-1] for path in stored_fits]
         fileObject = open(first_stored_fit,'r')
         alldata = pickle.load(fileObject)
-        config_pars = alldata[10]
-        fitresults_old = alldata[8]
+        config_pars = alldata[4]
+        fitresults_old = alldata[2]
         zguess = fitresults_old['redshift']
         fwhm_guess = fitresults_old['fwhm_g141']
-            ### also need to figure out what else to add? 
-            ### config pars for nodes can also be entered here. 
+        print 'using stored fit from: '  + users[0]
+        print 'available stored fits: ' 
+        print users
+ 
 
-
-
-### replace this with printouts from pickle files
 
     # print object info to screen
-#    if rejectPrevFit:
-#        print(' ')
-#        print_prompt("=" * 72)
-#        print_prompt("Par%i Obj %i:" % (par, obj))
-#        print_prompt("Initial redshift guess: z = %f" % (zguess))
-#        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
+    if rejectPrevFit:
+        print(' ')
+        print_prompt("=" * 72)
+        print_prompt("Par%s Obj %s:" % (par, obj))
+        print_prompt("Initial redshift guess: z = %f" % (zguess))
+        print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
 
     comment = ' '
     contamflags = {'o2':0, 'hg':0, 'hb':0, 'o3':0, 'ha':0, 's2':0, 's31':0, \
@@ -864,20 +894,6 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         elif option.strip().lower() == 'h':
             print_help_message()
 
-        ### image/display options ###
-        # change 2d stamp scaling to linear
-        elif option.strip().lower() == 'lin':
-            if g102zeros is not None:
-                show2dNEW('G102', par, obj, g102zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
-            if g141zeros is not None:
-                show2dNEW('G141', par, obj, g141zeros, user, 'linear', path_to_wisp_data = path_to_wisp_data)
-
-        # change 2d stamp scaling to log
-        elif option.strip().lower() == 'log':
-            if g102zeros is not None:
-                show2dNEW('G102', par, obj, g102zeros, user, 'log', path_to_wisp_data = path_to_wisp_data )
-            if g141zeros is not None:
-                show2dNEW('G141', par, obj, g141zeros, user, 'log', path_to_wisp_data = path_to_wisp_data)
 
         # change g102 2d stamp scaling to zscale
         elif option.strip().lower() == 'zs102':
@@ -890,9 +906,8 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
             except ValueError:
                 print_prompt('Invalid entry.')
             else:
-                if g102zeros is not None:
-                    show2dNEW('G102', par, obj, g102zeros, user, 'linear',
-                              zran1=z1, zran2=z2, path_to_wisp_data = path_to_wisp_data) 
+                if os.path.exists(g102_2d) : 
+                    show2dNEW(g102_2d + '[5]', 'linear', frameno = '2', zran1 = z1, zran2 = z2 )
 
 
         # change g141 2d stamp scaling to zscale
@@ -906,25 +921,61 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
             except ValueError:
                 print_prompt('Invalid entry.')
             else:
-                if g141zeros is not None:
-                    show2dNEW('G141', par, obj, g141zeros, user, 'linear',
-                              zran1=z1, zran2=z2, path_to_wisp_data = path_to_wisp_Data ) 
+                if os.path.exists(g141_2d):
+                    if availgrism == 'both' :
+                         show2dNEW(g141_2d + '[5]', 'linear', frameno = '4', zran1 = z1, zran2 = z2 )
+                    else:
+                         show2dNEW(g141_2d + '[5]', 'linear', frameno = '2', zran1 = z1, zran2 = z2 ) 
 
-        # recenter full images
-        elif option.strip().lower() == 'dc':
-            showDirectNEW(obj, path_to_wisp_data = path_two_wisp_data )
-            if show_dispersed:  # MB
-                showDispersed(obj, path_to_wisp_data = path_to_wisp_data) 
+
+        elif option.strip().lower() == 'zsimj':
+            print_prompt("Enter comma-separated range for G102-direct zscale: z1,z2")
+            zscale = raw_input("> ")
+            zs = zscale.split(',')
+            try:
+                z1 = float(zs[0])
+                z2 = float(zs[1])
+            except ValueError:
+                print_prompt('Invalid entry.')
+            else:
+                if os.path.exists(g102_2d) : 
+                    show2dNEW(g102_2d + '[1]', 'linear', frameno = '1', zran1 = z1, zran2 = z2 )
+
+
+        # change g141 2d stamp scaling to zscale
+        elif option.strip().lower() == 'zsimh':
+            print_prompt("Enter comma-separated range for G141-direct zscale: z1,z2")
+            zscale = raw_input("> ")
+            zs = zscale.split(',')
+            try:
+                z1 = float(zs[0])
+                z2 = float(zs[1])
+            except ValueError:
+                print_prompt('Invalid entry.')
+            else:
+                if os.path.exists(g141_2d):
+                    if availgrism == 'both' :
+                         show2dNEW(g141_2d + '[1]', 'linear', frameno = '3', zran1 = z1, zran2 = z2 )
+                    else:
+                         show2dNEW(g141_2d + '[1]', 'linear', frameno = '1', zran1 = z1, zran2 = z2 ) 
+                         
+
+
+         # recenter full images
+        #elif option.strip().lower() == 'dc':
+         #   showDirectNEW(obj, path_to_wisp_data = path_two_wisp_data )
+            #if show_dispersed:  # MB
+             #   showDispersed(obj, path_to_wisp_data = path_to_wisp_data) 
 
         # reload full iamges
-        elif option.strip().lower() == 'reload':
-            showDirectNEW(obj, load_image=True, path_to_wisp_data=path_to_wisp_data )
-            if show_dispersed:
-                showDispersed(obj, load_image=True, path_to_wisp_data = path_to_wisp_data) 
+        #elif option.strip().lower() == 'reload':
+        #    showDirectNEW(obj, load_image=True, path_to_wisp_data=path_to_wisp_data )
+            #if show_dispersed:
+            #   showDispersed(obj, load_image=True, path_to_wisp_data = path_to_wisp_data) 
 
         # reload direct image region files
-        elif option.strip().lower() == 'dr':
-            reloadReg()
+        #elif option.strip().lower() == 'dr':
+        #    reloadReg()
 
         ### new options dealing with iterating objects ###
         # can't actually go back or choose another object now,
@@ -1029,7 +1080,7 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=True, path_to_stored_fits = ' ', print_colors=True):
+def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored_fits = ' ', print_colors=True):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
@@ -1054,12 +1105,8 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=
     # not the best way to do this, but matching the method in guis.py
     cmd = 'xpaset -p ds9 tile'
     os.system(cmd)
-    if show_dispersed:
-        cmd = 'xpaset -p ds9 tile grid layout 2 3'
-    else:
-        cmd = 'xpaset -p ds9 tile grid layout 2 2'
-    os.system(cmd)
-
+   
+   
     #### STEP 1:   get linelist ###############################################
     ###########################################################################
     #if linelistfile == " ":
@@ -1101,7 +1148,6 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=
     objid = objid[w]
     z = z[w] 
     wavelen = wavelen[w]
-
 
 
 
@@ -1179,29 +1225,30 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=
     #trace141.write('box(13910.5,0,5897,1,0)\n')
     #trace141.close()
 
-    #### STEP 5:  Get zero and first order positions; unpack them ###########
+    #### STEP 5:  name the 2d Spectral files  unpack them ###########
     #########################################################################
     #### IN WISP, we make these as part of the pipeline and they live in the data directory with the full frame images 
-    #g102zeroordreg = path_to_data +'/G102_0th.reg'
+    #g102_3dhst  = path_to_data +'/2D/'  + dofield + '_' +  '{:05d}'.format(int(objid[0]))+ '_G102.2D.fits'  
+    #g141_3dhst =  path_to_data +'/2D/'  + dofield + '_' +   '{:05d}'.format(int(objid[0]))+ '_G141.2D.fits' 
     #g102firstordreg = path_to_data  +'/G102_1st.reg'
     #g141zeroordreg = path_to_data  + '/G141_0th.reg'
     #g141firstordreg = path_to_data + '/G141_1st.reg'
 
-    
+   
     #### STEP 7:  Set up initial ds9 display ################################
     #########################################################################
-    #if os.path.exists(g102zeroordreg):
+    #if os.path.exists(g102_3dhst): 
     #    g102zeroarr = getzeroorders(g102zeroordreg, g='G102')
     #    # nothing is done with the first orders anymore
     #    # g102firstarr=getfirstorders(g102firstordreg)
-    #    show2dNEW('G102', field[0], objid_unique[0], g102zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
+    #     show2dNEW(g012_3dhst, 'G102', 'linear')
     #else:
     #    g102zeroarr = None
     #    g102firstarr = None
-    #if os.path.exists(g141zeroordreg):
+    #if os.path.exists(g141_3dhst):
     #    g141zeroarr = getzeroorders(g141zeroordreg, g='G102')
     #    # g141firstarr=getfirstorders(g141firstordreg)
-    #    show2dNEW('G141', field[0], objid_unique[0], g141zeroarr, user, 'linear', path_to_wisp_data = path_to_wisp_data)
+    #    show2dNEW(g141_3dhst, 'G141', 'linear')
     #else:
     #    g141zeroarr = None
     #    g141firstarr = None
@@ -1212,6 +1259,7 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=
 
     #### STEP 8:  Loop through objects ############
     #########################################################################
+
     remaining_objects = get_remaining_objects(objid, objid_done)
     allobjects = [obj for obj in objid]
 
@@ -1274,37 +1322,38 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=
         lamlines_found = wavelen[wlinelist]
         zguess_obj = z[wlinelist]
                
-       #inspect_object(user, field[0], next_obj, objinfo, lamlines_found, 
-        #               ston_found, g102zeroarr, g141zeroarr, linelistoutfile, 
-        #               commentsfile, remaining_objects, allobjects,
-        #               show_dispersed=show_dispersed)
-       
+              
         if (use_stored_fits == True):
+
             ### get pickle files: 
             inpickles = [] 
-            path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
-            path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' + str(field[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+            path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'  
+            path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' +  dofield + '_' + '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'
+            
 
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1) 
             if os.path.exists(path_pickle2): 
                 inpickles.append(path_pickle2) 
 
+
+
             if len(inpickles) == 0:
                 use_stored_fits = False
+
 
         if (use_stored_fits == True) : 
 
             inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                 lamlines_found,  linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
-                                 show_dispersed=show_dispersed, stored_fits = inpickles, path_to_data = path_to_data) 
+                                  stored_fits = inpickles, path_to_data = path_to_data) 
              
         else: 
             inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                             lamlines_found, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
-                            show_dispersed=show_dispersed, stored_fits = False, path_to_data = path_to_data) 
+                            stored_fits = False, path_to_data = path_to_data) 
 
         objid_done = np.append(objid_done, next_obj)
         remaining_objects = get_remaining_objects(objid, objid_done)
@@ -1329,13 +1378,11 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS', show_dispersed=
                     if (use_stored_fits ==True): 
                         inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                        lamlines_found, linelistoutfile, commentsfile, 
-                                       remaining_objects, allobjects, 
-                                       show_dispersed=show_dispersed, stored_fits = inpickles) 
+                                       remaining_objects, allobjects, stored_fits = inpickles) 
                     else: 
                         inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                        lamlines_found, linelistoutfile, commentsfile, 
-                                       remaining_objects, allobjects, 
-                                       show_dispersed=show_dispersed, stored_fit = False) 
+                                       remaining_objects, allobjects, stored_fits = False) 
 
                 else:
                     break

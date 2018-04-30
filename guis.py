@@ -6,7 +6,7 @@ from wisp_analysis import *
 from distutils.sysconfig import *
 
 
-def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75, path_to_wisp_data  = ' '):
+def show2dNEW (specname_2d, trans, zran1=-0.2,zran2=0.75, frameno = 1):
 # In version 1.0, will first look for wavelength-calibrated stamps in the G1??_DRIZZLE directories; failing this, will default to old stamps
     # zero and first order positions
 #    firstx = firstarr['x']
@@ -14,131 +14,103 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75, path_t
 #    firstlen = firstarr['len']
 #    firstwid = firstarr['width']
 #    firstid = firstarr['objid']
-    zerox = zeroarr['x']
-    zeroy = zeroarr['y']
-    zeroid = zeroarr['objid']
+    #zerox = zeroarr['x']
+    #zeroy = zeroarr['y']
+    #zeroid = zeroarr['objid']
 
-    dims=()
-    zrad=10.0
-    workingdir=os.getcwd()
-    par_root_dir='/'
-    if path_to_wisp_data == ' ' : 
-        dirpts=workingdir.split('/')[1:-1]
-        for pdir in dirpts:
-            par_root_dir= par_root_dir +pdir + '/'
-        path2dl=par_root_dir + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits'
-    else :
-        path2dl = path_to_wisp_data + '/Par' + str(parno) +'/' + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits' 
+    #dims=()
+    #zrad=10.0
+    #workingdir=os.getcwd()
+    #par_root_dir='/'
+
+
+
+    #if path_to_wisp_data == ' ' : 
+     #   dirpts=workingdir.split('/')[1:-1]
+     #   for pdir in dirpts:
+     #       par_root_dir= par_root_dir +pdir + '/'
+     #   path2dl=par_root_dir + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits'
+    #else :
+    #    path2dl = path_to_wisp_data + '/Par' + str(parno) +'/' + grism + '_DRIZZLE/aXeWFC3_' +grism + '_mef_ID'+str(obid)+'.fits' 
         
-    if os.path.exists(path2dl)==1:
-        path2d=path2dl
-    else:
-        if path_to_wisp_data == ' ':
-             path2d=par_root_dir+'Stamps/Par'+ str(parno)+'_'+grism+'_BEAM_'+str(obid)+'A.fits'
-        else: 
-             path2d = path_to_wisp_data + '/Par' + str(parno) + '/Stamps/Par' + str(parno) + '_'+grism+'_BEAM_'+str(obid)+'A.fits'
+    #if os.path.exists(path2dl)==1:
+    #    path2d=path2dl
+    #else:
+    #    if path_to_wisp_data == ' ':
+    #         path2d=par_root_dir+'Stamps/Par'+ str(parno)+'_'+grism+'_BEAM_'+str(obid)+'A.fits'
+    #    else: 
+    #         path2d = path_to_wisp_data + '/Par' + str(parno) + '/Stamps/Par' + str(parno) + '_'+grism+'_BEAM_'+str(obid)+'A.fits'
  
-    if grism=='G102':
-        frameno='1'
-    elif grism=='G141':
-        frameno='2'
-    if os.path.exists(path2d)==1:
-        infits=fits.open(path2d)
-        ### changing to read in 1st data extension ###
-        #darr=infits[-1].data
-        hdr=infits[1].header
-        darr=infits[1].data
-        dims=darr.shape
-        infits.close()
-    elif os.path.exists(path2d)==0:
-        print "%s stamp not found." % (grism)
-        return False
-
-    ### USING THE DRIZZLE TRANSFORMATIONS TO GET ZEROTH ORDERS ###
-    _cx = np.array([xcoo for xcoo in zerox]) - hdr['BB0X'] - 1
-    _cy = np.array([ycoo for ycoo in zeroy]) - hdr['BB0Y'] - 1
-    cx = hdr['D001OUXC'] + (hdr['DRZ00'] + hdr['DRZ01']*(_cx-hdr['D001INXC']) + hdr['DRZ02']*(_cy-hdr['D001INYC']))
-    cy = hdr['D001OUYC'] + (hdr['DRZ10'] + hdr['DRZ11']*(_cx-hdr['D001INXC']) + hdr['DRZ12']*(_cy-hdr['D001INYC']))
-    # convert to (Angs,arcsec) coords
-    cx = (cx - hdr['CRPIX1'])*hdr['CDELT1'] + hdr['CRVAL1']
-    cy = (cy - hdr['CRPIX2'])*hdr['CDELT2'] + hdr['CRVAL2']
-    rad = 5 * hdr['CDELT1']
-
-    if path_to_wisp_data != ' ' : 
-        par_root_dir = path_to_wisp_data + '/Par' + str(parno) + '/'
-    outcoo = par_root_dir+"Spectra/temp_zero_coords_%s.reg"%user 
-
-    if os.path.exists(outcoo)==1:
-        os.unlink(outcoo)
-    f = open(outcoo, 'w')
-    f.write('wcs;\n')
-    for j in range(len(zerox)):
-        f.write('circle(%.2f,%.4f,%.1f) # color=red text={%s}\n' % (cx[j],cy[j],rad,zeroid[j]))
-    f.close()
-
-
-    ### THIS WAS ALL FOR THE OLD TRANSFORMATION ###
-#    matchind=0
-#    i=0
-#    for fid in firstid:
-#        if fid==obid:
-#            matchind=i
-#            break
-#        i=i+1
-#    xmin=firstx[matchind]-firstlen[matchind]/2.0
-#    xmax=firstx[matchind]+firstlen[matchind]/2.0
-#    ymin=firsty[matchind]-firstwid[matchind]/2.0
-#    ymax=firsty[matchind]+firstwid[matchind]/2.0
-#    
-#    numzer=0
-#    if len(dims)>0:
-#        xdim=float(max(dims))
-#        ydim=float(min(dims))
-#    outcoo=par_root_dir+"Spectra/temp_zero_coords.reg"
-#    if os.path.exists(outcoo)==1:
-#        os.unlink(outcoo)
-#    coordout=open(outcoo,'w')
-#    print >>coordout, "image"
-#    for j in range(len(zerox)):
-#        # MB: use dims of stamp, rather than size of 1st order in region file
-#        if zerox[j] >= (firstx[matchind] - xdim/2.) and \
-#           zerox[j] <= (firstx[matchind] + xdim/2.) and \
-#           zeroy[j] >= (firsty[matchind] - ydim/2.) and \
-#           zeroy[j] <= (firsty[matchind] + ydim/2.) and grism=='G102':
-##    	if zerox[j]>=(xmin-zrad) and zerox[j]<=(xmax+zrad) and zeroy[j]>=(ymin-zrad) and zeroy[j]<=(ymax+zrad) and grism=='G102':
-#    		print >>coordout, "circle(%.2f,%.2f,5.0) # text={%s}" % (zerox[j]/1.7-firstx[matchind]/1.7+212./2.0-13,zeroy[j]/1.6-firsty[matchind]/1.6+ydim/2.0+3.6,zeroid[j])
-#
-#        elif zerox[j] >= (firstx[matchind] - xdim/2.) and \
-#             zerox[j] <= (firstx[matchind] + xdim/2.) and \
-#             zeroy[j] >= (firsty[matchind] - ydim/2.) and \
-#             zeroy[j] <= (firsty[matchind] + ydim/2.) and grism=='G141':
-##    	elif  zerox[j]>=(xmin-zrad) and zerox[j]<=(xmax+zrad) and zeroy[j]>=(ymin-zrad) and zeroy[j]<=(ymax+zrad) and grism=='G141':
-#    		print >>coordout, "circle(%.2f,%.2f,5.0) # text={%s}" % (zerox[j]/1.7-firstx[matchind]/1.7+184./2.0,zeroy[j]/1.6-firsty[matchind]/1.6+ydim/2.0+0.6,zeroid[j])
-#    numzer=numzer+1
-#    coordout.close()
-    
+   
     if trans=='log':
         zscale='log'
     else:
         zscale='linear'
+
+    #if os.path.exists(specname_2d)== True:
+        #infits=fits.open(path2d)
+        ### changing to read in 1st data extension ###
+        #darr=infits[-1].data
+        #hdr=infits[1].header
+        #darr=infits[1].data
+        #dims=darr.shape
+        #infits.close()
+ 
+
     cmd='xpaset -p ds9 frame '+frameno
     os.system(cmd)
-    cmd='xpaset -p ds9 file '+path2d
+    cmd='xpaset -p ds9 file '+ specname_2d
     os.system(cmd)
     cmd='xpaset -p ds9 scale limits '+str(zran1)+' '+str(zran2)
     os.system(cmd)
     cmd='xpaset -p ds9 scale '+zscale
     os.system(cmd)
+
+    #elif os.path.exists(specname_2d)==False:
+    #    print "%s stamp not found." % (grism)
+    #    return False
+
+    ### USING THE DRIZZLE TRANSFORMATIONS TO GET ZEROTH ORDERS ###
+    #_cx = np.array([xcoo for xcoo in zerox]) - hdr['BB0X'] - 1
+    #_cy = np.array([ycoo for ycoo in zeroy]) - hdr['BB0Y'] - 1
+    #cx = hdr['D001OUXC'] + (hdr['DRZ00'] + hdr['DRZ01']*(_cx-hdr['D001INXC']) + hdr['DRZ02']*(_cy-hdr['D001INYC']))
+    #cy = hdr['D001OUYC'] + (hdr['DRZ10'] + hdr['DRZ11']*(_cx-hdr['D001INXC']) + hdr['DRZ12']*(_cy-hdr['D001INYC']))
+    # convert to (Angs,arcsec) coords
+    #cx = (cx - hdr['CRPIX1'])*hdr['CDELT1'] + hdr['CRVAL1']
+    #cy = (cy - hdr['CRPIX2'])*hdr['CDELT2'] + hdr['CRVAL2']
+    #rad = 5 * hdr['CDELT1']
+
+    #if path_to_wisp_data != ' ' : 
+    #    par_root_dir = path_to_wisp_data + '/Par' + str(parno) + '/'
+    #outcoo = par_root_dir+"Spectra/temp_zero_coords_%s.reg"%user 
+
+    #if os.path.exists(outcoo)==1:
+    #    os.unlink(outcoo)
+    #f = open(outcoo, 'w')
+    #f.write('wcs;\n')
+    #for j in range(len(zerox)):
+    #    f.write('circle(%.2f,%.4f,%.1f) # color=red text={%s}\n' % (cx[j],cy[j],rad,zeroid[j]))
+    #f.close()
+
+
+    #cmd='xpaset -p ds9 frame '+frameno
+    #os.system(cmd)
+    #cmd='xpaset -p ds9 file '+ specname_2d
+    #os.system(cmd)
+    #cmd='xpaset -p ds9 scale limits '+str(zran1)+' '+str(zran2)
+    #os.system(cmd)
+    #cmd='xpaset -p ds9 scale '+zscale
+    #os.system(cmd)
     #cmd='xpaset -p ds9 zoom to fit'
     #os.system(cmd) 
-    cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/temp_zero_coords_%s.reg'%user
-    os.system(cmd)
+    #cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/temp_zero_coords_%s.reg'%user
+    #os.system(cmd)
     # MR
-    if frameno=='1':
-        cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/G102_trace.reg'
-    if frameno=='2':
-        cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/G141_trace.reg'
-    os.system(cmd)
+    #if frameno=='1':
+    #    cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/G102_trace.reg'
+    #if frameno=='2':
+    #    cmd='xpaset -p ds9 regions file '+par_root_dir+ 'Spectra/G141_trace.reg'
+    #os.system(cmd)
 
 
 
