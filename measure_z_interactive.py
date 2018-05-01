@@ -1414,20 +1414,72 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
                     lamlines_found = wavelen[wlinelist]
                     ston_found = ston[wlinelist]
                     wcatalog = np.where(objtable['obj'] == next_obj)
-                    objinfo = objtable[wcatalog]
+                    objinfo = objtable[wcatalog] 
+
+                    
+                    if (use_stored_fits == True):
+                       ### get pickle files: 
+                       inpickles = [] 
+                       path_pickle1 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_mbagley/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'  
+                       path_pickle2 = path_to_stored_fits + '/Par'  + str(parnos[0]) +    '_output_marc/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle3 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_claudia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle4 = path_to_stored_fits + '/Par'  + str(parnos[0]) +     '_output_ben/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle5 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_vihang/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle6 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_ivano/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle7 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mbeck/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle8 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_karlenoid/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle9 = path_to_stored_fits + '/Par'  + str(parnos[0]) +  '_output_mjr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle10 = path_to_stored_fits + '/Par'  + str(parnos[0]) + '_output_sophia/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle11 = '/Volumes/Thunderbay/wisps/mzr_refit/Par'  + str(parnos[0]) + '_output_marc-mzr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+                       path_pickle12 = '/Volumes/Thunderbay/wisps/mzr_refit/Par'  + str(parnos[0]) + '_output_alaina-mzr/fitdata/Par' + str(parnos[0]) + '_BEAM_' + str(next_obj) + '_fitspec.pickle'
+
+
+
+                       ### put new fits first
+                       if os.path.exists(path_pickle11): 
+                           inpickles.append(path_pickle11) 
+                       if os.path.exists(path_pickle12): 
+                           inpickles.append(path_pickle12) 
+                       if os.path.exists(path_pickle1): 
+                          inpickles.append(path_pickle1)  
+                       if os.path.exists(path_pickle2): 
+                          inpickles.append(path_pickle2)  
+                       if os.path.exists(path_pickle3): 
+                          inpickles.append(path_pickle3) 
+                       if os.path.exists(path_pickle4): 
+                          inpickles.append(path_pickle4) 
+                       if os.path.exists(path_pickle5): 
+                          inpickles.append(path_pickle5) 
+                       if os.path.exists(path_pickle6): 
+                          inpickles.append(path_pickle6)  
+                       if os.path.exists(path_pickle7): 
+                          inpickles.append(path_pickle7) 
+                       if os.path.exists(path_pickle8): 
+                          inpickles.append(path_pickle8) 
+                       if os.path.exists(path_pickle9): 
+                          inpickles.append(path_pickle9) 
+                       if os.path.exists(path_pickle10): 
+                          inpickles.append(path_pickle10) 
+            
+ 
+                       if len(inpickles) == 0:
+                           use_stored_fits = False 
+
+
+
+
                     if (use_stored_fits ==True): 
-                        inspect_object(user, parnos[0], next_obj, objinfo, 
-                                       lamlines_found, ston_found, g102zeroarr, 
-                                       g141zeroarr, linelistoutfile, commentsfile, 
-                                       remaining_objects, allobjects, 
-                                       show_dispersed=show_dispersed, stored_fits = inpickles) 
+                       inspect_object(user, parnos[0], next_obj, objinfo, 
+                                lamlines_found, ston_found, g102zeroarr, 
+                                g141zeroarr, linelistoutfile, commentsfile, 
+                                remaining_objects, allobjects, 
+                                 show_dispersed=show_dispersed, stored_fits = inpickles, path_to_wisp_data = path_to_wisp_data)   
                     else: 
                         inspect_object(user, parnos[0], next_obj, objinfo, 
-                                       lamlines_found, ston_found, g102zeroarr, 
-                                       g141zeroarr, linelistoutfile, commentsfile, 
-                                       remaining_objects, allobjects, 
-                                       show_dispersed=show_dispersed, stored_fit = False) 
-
+                            lamlines_found, ston_found, g102zeroarr, 
+                            g141zeroarr, linelistoutfile, commentsfile, 
+                            remaining_objects, allobjects, 
+                            show_dispersed=show_dispersed, stored_fits = False, path_to_wisp_data = path_to_wisp_data)
                 else:
                     break
 
