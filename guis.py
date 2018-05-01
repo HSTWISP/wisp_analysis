@@ -6,7 +6,7 @@ from wisp_analysis import *
 from distutils.sysconfig import *
 
 
-def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75, path_to_wisp_data  = ' '):
+def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=None,zran2=None, path_to_wisp_data  = ' '):
 # In version 1.0, will first look for wavelength-calibrated stamps in the G1??_DRIZZLE directories; failing this, will default to old stamps
     # zero and first order positions
 #    firstx = firstarr['x']
@@ -48,8 +48,15 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75, path_t
         #darr=infits[-1].data
         hdr=infits[1].header
         darr=infits[1].data
+        rms = np.std(darr) 
         dims=darr.shape
         infits.close()
+
+        if zran1 == None:  
+            zran1 = -1 * rms 
+        if zran2 = None: 
+            zran2 = 5 * rms 
+
     elif os.path.exists(path2d)==0:
         print "%s stamp not found." % (grism)
         return False
@@ -117,6 +124,11 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=-0.2,zran2=0.75, path_t
 #    numzer=numzer+1
 #    coordout.close()
     
+    
+
+    
+
+
     if trans=='log':
         zscale='log'
     else:
