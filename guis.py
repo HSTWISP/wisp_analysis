@@ -54,7 +54,7 @@ def show2dNEW (grism,parno,obid,zeroarr,user,trans,zran1=None,zran2=None, path_t
 
         if zran1 == None:  
             zran1 = -1 * rms 
-        if zran2 = None: 
+        if zran2 == None: 
             zran2 = 5 * rms 
 
     elif os.path.exists(path2d)==0:
