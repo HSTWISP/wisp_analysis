@@ -1375,14 +1375,37 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
                     wlinelist = np.where(objid == next_obj)
                     lamlines_found = wavelen[wlinelist]
                     zguess_obj = z[wlinelist]
+
+                    if (use_stored_fits == True):
+
+                       inpickles = [] 
+                       path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'  
+                       path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' +  dofield + '_' + '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'
+            
+
+                       if os.path.exists(path_pickle1): 
+                          inpickles.append(path_pickle1) 
+                       if os.path.exists(path_pickle2): 
+                          inpickles.append(path_pickle2) 
+
+
+
+                       if len(inpickles) == 0:
+                          use_stored_fits = False
+
+
+
                     if (use_stored_fits ==True): 
                         inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
-                                       lamlines_found, linelistoutfile, commentsfile, 
-                                       remaining_objects, allobjects, stored_fits = inpickles) 
+                                lamlines_found,  linelistoutfile, commentsfile, 
+                                remaining_objects, allobjects, 
+                                  stored_fits = inpickles, path_to_data = path_to_data) 
                     else: 
                         inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
-                                       lamlines_found, linelistoutfile, commentsfile, 
-                                       remaining_objects, allobjects, stored_fits = False) 
+                            lamlines_found, linelistoutfile, commentsfile, 
+                            remaining_objects, allobjects, 
+                            stored_fits = False, path_to_data = path_to_data) 
+
 
                 else:
                     break
