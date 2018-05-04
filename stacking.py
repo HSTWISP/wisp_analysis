@@ -19,8 +19,8 @@ def stack_spec(inlist, outstack, norm_mode = None, stack_mode = None):
     ### define arrays to hold output stack and 2d pre-stack "image"
 
     dlam = 7 ## 7 A bins in the rest frame are reasonable. 
-    lam_blue = 3000. 
-    lam_red = 7000. 
+    lam_blue = 3250. 
+    lam_red = 7200. 
     nlam = int((lam_red  -lam_blue) / dlam) 
     lam_stack = np.arange(nlam) * dlam + lam_blue
 
@@ -113,7 +113,6 @@ def stack_spec(inlist, outstack, norm_mode = None, stack_mode = None):
 
     #plt.imshow(stack_frame) 
     #plt.show() 
-    print 'am I doing something new?' 
     for i in np.arange(nlam): 
         w=np.where(stack_frame[:, i] > -1) 
         stack_spec[i] = np.median(stack_frame[w, i])  
