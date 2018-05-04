@@ -271,7 +271,7 @@ def make_tarfile(outdir):
         tar.add(outdir, arcname=os.path.basename(outdir))
 
 
-def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel, full_contmodel, current_lam, lamlines_found, index_of_strongest_line, contmodel, plottitle,outdir, zset=None):
+def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, snr_tot_others, full_fitmodel, full_contmodel, current_lam, lamlines_found, index_of_strongest_line, contmodel, plottitle,outdir, zset=None):
     """
     # save the figure for everything, junk objects and all
     # previous figures are overwritten
@@ -423,16 +423,16 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array, full_fitmodel
     # fig = plt.gcf() a
     
     if zset is None:
-        addtext = 'In progress, z={:.3f}'.format(zfit)
+        addtext = 'In progress, z={:.3f}'.format(zfit) + ',  ' + 'confirming SNR = {:.3f}'.format(snr_tot_others)
         addtextcolor = 'orange'
     elif zset == 0:
         addtext = 'Rejected'
         addtextcolor = 'red'
     elif zset == 1:
-        addtext = 'Accepted, z={:.3f}'.format(zfit)
+        addtext = 'Accepted, z={:.3f}'.format(zfit) +  ',  ' + 'confirming SNR = {:.3f}'.format(snr_tot_others)
         addtextcolor = 'green'
 
-    fig.text(0.3, 0.93, addtext, ha='right', va='bottom', color=addtextcolor, 
+    fig.text(0.65, 0.93, addtext, ha='right', va='bottom', color=addtextcolor, 
              fontsize=18, fontweight=500, 
              path_effects=[PathEffects.withStroke(linewidth=0.5,foreground="k")])
     fig.savefig(plotfilename)
@@ -562,7 +562,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         print_prompt("Initial redshift guess: z = %f" % (zguess))
         print_prompt("\nWhat would you like to do with this object?\nSee the README for options, or type 'h' to print them all to the screen.")
 
-    comment = ' '
+    comment = ''
     contamflags = {'o2':0, 'hg':0, 'hb':0, 'o3':0, 'ha':0, 's2':0, 's31':0, \
                    's32':0, 'he1':0}
     # Skip if previous fit is to be accepted
@@ -627,11 +627,19 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                                    fitresults['siii_9532_flux'] /
                                    fitresults['siii_9532_error'],
                                    fitresults['he1_flux'] / fitresults['he1_error']])
+
+        #### calculate the significance of the other lines that are not  oiii. 
+        signal_lines = np.array([fitresults['oii_flux'], fitresults['hg_flux'], fitresults['hb_flux'], fitresults['hanii_flux'], fitresults['sii_flux']])
+        err_lines = np.array([fitresults['oii_error'], fitresults['hg_error'], fitresults['hb_error'], fitresults['hanii_error'], fitresults['sii_error']]) 
+
+        w=np.where(signal_lines > 0) 
+        snr_tot_others = np.sum(signal_lines[w]) / np.sqrt(np.sum(err_lines[w]**2)) 
+
         
 
         # plot the whole goddamn thing
         plot_object(zguess, fitresults['redshift'], 
-                    spdata, config_pars, snr_meas_array, full_fitmodel,
+                    spdata, config_pars, snr_meas_array, snr_tot_others, full_fitmodel,
                     full_contmodel, lamline, lamlines_found, 
                     index_of_strongest_line, contmodel, plottitle, outdir)
 #        print "    Guess Redshift: z = %f" % (zguess)
@@ -645,7 +653,10 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # reject object
         if option.strip().lower() == 'r':
            zset = 0
-           comment = 'rejected' 
+           if len(comment) > 0: 
+               comment = 'rejected'  + ', ' + comment 
+           else :
+                comment = 'rejected' 
            done = 1
 
         # accept object
@@ -866,7 +877,11 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
         # add a comment
         elif option.strip().lower() == 'c':
             print_prompt("Enter your comment here:")
-            comment = raw_input("> ")
+            if len(comment) > 0: 
+                comment = raw_input("> ") + ', ' + comment  
+            else : 
+                comment =  raw_input("> ")  
+                
             # sqlite3 database support - automatically creates and initializes DB if required
            # databaseManager.saveAnnotation((par, obj, comment.decode('utf-8')))
 
@@ -979,7 +994,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
     if rejectPrevFit :
         # plot the whole goddamn thing
         plot_object(zguess, fitresults['redshift'],
-                    spdata, config_pars, snr_meas_array, full_fitmodel,
+                    spdata, config_pars, snr_meas_array, snr_tot_others, full_fitmodel,
                     full_contmodel, lamline, lamlines_found, 
                     index_of_strongest_line, contmodel, plottitle, 
                     outdir, zset=zset)
@@ -998,7 +1013,7 @@ def inspect_object(user, par, obj, objinfo, lamlines_found, ston_found, g102zero
                                                                               #     b_image[0], jmag[0], hmag[0], fitresults, flagcont))
 
             writeToCatalog(linelistoutfile, par, obj, ra, dec, a_image,
-                           b_image, jmag, hmag, fitresults, contamflags)
+                           b_image, jmag, hmag, snr_tot_others, fitresults, contamflags)
 
             writeFitdata(fitdatafilename, spec_lam, spec_val, spec_unc,
                          spec_con, spec_zer, full_fitmodel, full_contmodel, mask_flg)
@@ -1510,7 +1525,7 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
 
 
 # parnos, objid are scalar not array.
-def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, fitresults, contamflags):
+def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_image_obj, jmag_obj, hmag_obj, snr_tot_others, fitresults, contamflags):
     if not os.path.exists(catalogname):
         cat = open(catalogname, 'w')
         cat.write('#1  ParNo\n')
@@ -1523,47 +1538,48 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
         cat.write('#8 B_IMAGE \n')
         cat.write('#9 redshift \n')
         cat.write('#10 redshift_err \n')
-        cat.write('#11 dz_oiii \n')
-        cat.write('#12 dz_oii \n')
-        cat.write('#13 dz_siii_he1 \n')
-        cat.write('#14 G141_FWHM_Obs  [Angs] \n')
-        cat.write('#15 G141_FWHM_Obs_err  \n')
-        cat.write('#16 oii_flux \n')
-        cat.write('#17 oii_err \n')
-        cat.write('#18 oii_EW_obs \n')
-        cat.write('#19 oii_contam \n')
-        cat.write('#20 hg_flux \n')
-        cat.write('#21 hg_err \n')
-        cat.write('#22 hg_EW_obs \n')
-        cat.write('#23 hg_contam \n')
-        cat.write('#24 hb_flux \n')
-        cat.write('#25 hb_err \n')
-        cat.write('#26 hb_EW_obs \n')
-        cat.write('#27 hb_contam \n')
-        cat.write('#28 oiii_flux [both lines] \n')
-        cat.write('#29 oiii_err [both lines] \n')
-        cat.write('#30 oiii_EW_obs [both lines] \n')
-        cat.write('#31 oiii_contam [both lines] \n')
-        cat.write('#32 hanii_flux \n')
-        cat.write('#33 hanii_err \n')
-        cat.write('#34 hanii_EW_obs \n')
-        cat.write('#35 hanii_contam \n')
-        cat.write('#36 sii_flux \n')
-        cat.write('#37 sii_err \n')
-        cat.write('#38 sii_EW_obs \n')
-        cat.write('#39 sii_contam \n')
-        cat.write('#40 siii_9069_flux \n')
-        cat.write('#41 siii_9069_err \n')
-        cat.write('#42 siii_9069_EW_obs \n')
-        cat.write('#43 siii_9069_contam \n')
-        cat.write('#44 siii_9532_flux \n')
-        cat.write('#45 siii_9532_err \n')
-        cat.write('#46 siii_9532_EW_obs \n')
-        cat.write('#47 siii_9532_contam \n')
-        cat.write('#48 he1_10830_flux \n')
-        cat.write('#49 he1_10830_err \n')
-        cat.write('#50 he1_10830_EW_obs \n')
-        cat.write('#51 he1_10830_contam \n')
+        cat.write('#11 SNR_confirm [Combined OII, Hg, Hb, Ha, SII] \n') 
+        cat.write('#12 dz_oiii \n')
+        cat.write('#13 dz_oii \n')
+        cat.write('#14 dz_siii_he1 \n')
+        cat.write('#15 G141_FWHM_Obs  [Angs] \n')
+        cat.write('#16 G141_FWHM_Obs_err  \n')
+        cat.write('#17 oii_flux \n')
+        cat.write('#18 oii_err \n')
+        cat.write('#19 oii_EW_obs \n')
+        cat.write('#20 oii_contam \n')
+        cat.write('#21 hg_flux \n')
+        cat.write('#22 hg_err \n')
+        cat.write('#23 hg_EW_obs \n')
+        cat.write('#24 hg_contam \n')
+        cat.write('#25 hb_flux \n')
+        cat.write('#26 hb_err \n')
+        cat.write('#27 hb_EW_obs \n')
+        cat.write('#28 hb_contam \n')
+        cat.write('#29 oiii_flux [both lines] \n')
+        cat.write('#30 oiii_err [both lines] \n')
+        cat.write('#31 oiii_EW_obs [both lines] \n')
+        cat.write('#32 oiii_contam [both lines] \n')
+        cat.write('#33 hanii_flux \n')
+        cat.write('#34 hanii_err \n')
+        cat.write('#35 hanii_EW_obs \n')
+        cat.write('#36 hanii_contam \n')
+        cat.write('#37 sii_flux \n')
+        cat.write('#38 sii_err \n')
+        cat.write('#39 sii_EW_obs \n')
+        cat.write('#40 sii_contam \n')
+        cat.write('#41 siii_9069_flux \n')
+        cat.write('#42 siii_9069_err \n')
+        cat.write('#43 siii_9069_EW_obs \n')
+        cat.write('#44 siii_9069_contam \n')
+        cat.write('#45 siii_9532_flux \n')
+        cat.write('#46 siii_9532_err \n')
+        cat.write('#47 siii_9532_EW_obs \n')
+        cat.write('#48 siii_9532_contam \n')
+        cat.write('#49 he1_10830_flux \n')
+        cat.write('#50 he1_10830_err \n')
+        cat.write('#51 he1_10830_EW_obs \n')
+        cat.write('#52 he1_10830_contam \n')
 
 #        cat.write('#43 ContamFlag \n')
         cat.close()
@@ -1582,6 +1598,7 @@ def writeToCatalog(catalogname, parnos, objid, ra_obj, dec_obj, a_image_obj, b_i
         '{:<8.3f}'.format(b_image_obj[0]) + \
         '{:>8.4f}'.format(fitresults['redshift']) + \
         '{:>10.4f}'.format(fitresults['redshift_err']) +\
+        '{:>10.4f}'.format(snr_tot_others) +\
         '{:>10.4f}'.format(fitresults['dz_oiii'])  + \
         '{:>10.4f}'.format(fitresults['dz_oii'])   + \
         '{:>10.4f}'.format(fitresults['dz_siii_he1']) +\
