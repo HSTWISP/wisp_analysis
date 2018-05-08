@@ -1081,15 +1081,14 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
         path_to_wisp_data = '../../' 
 
 
-    if path_to_stored_fits == ' ': 
-        use_stored_fits  = False 
-    elif os.path.exists(path_to_stored_fits) : 
-        use_stored_fits = True 
-        print 'looking for stored fit data' 
-    else: 
-        use_stored_fits = False
-        print 'not using stored fit data'
-    
+    #if path_to_stored_fits == ' ': 
+    #    use_stored_fits  = False 
+    #elif os.path.exists(path_to_stored_fits) : 
+    #    use_stored_fits = True 
+    #    print 'looking for stored fit data' 
+    #else: 
+    #    use_stored_fits = False
+    #    print 'not using stored fit data'
      
     
     #### STEP 0:   set ds9 window to tile mode ################################
@@ -1283,6 +1282,15 @@ def measure_z_interactive(linelistfile=" ", path_to_wisp_data = ' ', show_disper
     print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\th = help/list interactive commands\n\tq = quit\n', prompt_type='interim')
 
     while remaining_objects.shape[0] > 0:
+        if path_to_stored_fits == ' ': 
+            use_stored_fits  = False 
+        elif os.path.exists(path_to_stored_fits) : 
+            use_stored_fits = True 
+            print 'looking for stored fit data' 
+        else: 
+            use_stored_fits = False
+            print 'not using stored fit data'
+
         ndone = len(np.unique(objid_done))
         progress = float(ndone) / float(len(objid_unique)) * 100.
         print_prompt("\nProgress: %.1f percent" % (progress),prompt_type='interim')
