@@ -1106,12 +1106,13 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
         path_to_data = './' 
 
 
-    if path_to_stored_fits == ' ': 
-        use_stored_fits  = False 
-    elif os.path.exists(path_to_stored_fits) : 
-        use_stored_fits = True 
-    else: 
-        use_stored_fits = False 
+    #if path_to_stored_fits == ' ': 
+    #    use_stored_fits  = False 
+    #elif os.path.exists(path_to_stored_fits) : 
+    #    use_stored_fits = True
+    #    print 'looking for stored fits'
+    #else: 
+    #    use_stored_fits = False 
     
       
     #### STEP 0:   set ds9 window to tile mode ################################
@@ -1280,6 +1281,16 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
     print_prompt('\nAs you loop through the objects, you can choose from the following\noptions at any time:\n\txxx = skip to object xxx\n\tb = revisit the previous object\n\tleft = list all remaining objects that need review\n\tlist = list all objects in line list\n\tany other key = continue with the next object\n\tq = quit\n', prompt_type='interim')
 
     while remaining_objects.shape[0] > 0:
+        if path_to_stored_fits == ' ': 
+             use_stored_fits  = False 
+        elif os.path.exists(path_to_stored_fits) : 
+             use_stored_fits = True
+             print 'looking for stored fits'
+        else: 
+             use_stored_fits = False 
+ 
+  
+
         ndone = len(np.unique(objid_done))
         progress = float(ndone) / float(len(objid)) * 100.
         print_prompt("\nProgress: %.1f percent" % (progress),prompt_type='interim')
@@ -1336,7 +1347,8 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
         lamlines_found = wavelen[wlinelist]
         zguess_obj = z[wlinelist]
                
-              
+           
+        print 'use stored fits == ', use_stored_fits  
         if (use_stored_fits == True):
 
             ### get pickle files: 
@@ -1344,13 +1356,10 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
             path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'  
             path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' +  dofield + '_' + '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'
             
-
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1) 
             if os.path.exists(path_pickle2): 
                 inpickles.append(path_pickle2) 
-
-
 
             if len(inpickles) == 0:
                 use_stored_fits = False
