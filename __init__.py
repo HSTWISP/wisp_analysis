@@ -30,7 +30,8 @@ from fitting import fitandplot
 from guis import * 
 from measure_z_interactive import * 
 import pickle 
-from gather_secure_sample import *
+from gather_secure_sample import * 
+from measure_stack import *
 
 
 try:
