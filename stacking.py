@@ -1,8 +1,10 @@
 from wisp_analysis import * 
 from scipy import interpolate
+import time
 
-def stack_spec(inlist, outstack, norm_mode = None, stack_mode = None): 
 
+def stack_spec(inlist, outstack, bootstrap = None): 
+    t0 = time.time()
     inlist_data = asciitable.read(inlist) 
     fieldname = inlist_data['col1']
     objid = inlist_data['col2']  
@@ -26,6 +28,7 @@ def stack_spec(inlist, outstack, norm_mode = None, stack_mode = None):
 
     stack_frame = np.zeros( (ngals, nlam))  - 1   ## fill these placeholders with -1's to mark empty data 
     stack_spec = np.zeros(nlam) - 1 
+    stack_err = np.zeros(nlam) - 1 
 
     ### fill the stack frame with one row per spectrum. 
     for i in  np.arange(ngals): 
@@ -113,11 +116,56 @@ def stack_spec(inlist, outstack, norm_mode = None, stack_mode = None):
 
     #plt.imshow(stack_frame) 
     #plt.show() 
+
+    t1 = time.time() 
+
+    print str(t1 - t0) + ' seconds to read and de-redshift spectra'     
     for i in np.arange(nlam): 
         w=np.where(stack_frame[:, i] > -1) 
-        stack_spec[i] = np.median(stack_frame[w, i])  
+        w=w[0]
+        stack_spec[i] = np.median(stack_frame[w, i])   
+        stack_err[i] = np.std(stack_frame[w, i]) / np.sqrt(np.size(w))
+    
+    t2 = time.time() 
+    print str(t2 - t1)  + ' seconds  to take the median' 
 
-    plt.plot(lam_stack, stack_spec, ls='steps-mid')   
+    if bootstrap == True : 
+        nstraps = 50  ### later make nstraps = ngals. 
+        bootstrap_array_2d = np.zeros( (nstraps, nlam))  - 1
+        for i in np.arange(nstraps) : 
+            stack_frame_bootstrap = np.zeros( (ngals, nlam))  - 1 
+            ### generage a set of indices for the individual spectra that we will draw to sample
+            sample_indicies = np.round(np.random.uniform(0, ngals-1, ngals)).astype(int) 
+            #### insert these individual into the bootstrap stack 
+            for j in np.arange(ngals):
+                stack_frame_bootstrap[j, :] = stack_frame[sample_indicies[j], :] 
+
+            ### re-write the bootstrapped spectrum into a 2d array, one spectrum per row
+            for j in np.arange(nlam): 
+                w=np.where(stack_frame_bootstrap[:, j] > -1) 
+                w=w[0]
+                bootstrap_array_2d[i, j] = np.median(stack_frame_bootstrap[w, j])   
+            
+        for i in np.arange(nlam) : 
+            stack_err[i] = np.std(bootstrap_array_2d[:, i]) 
+
+
+
+
+
+    print 'writing output file: ' +  outstack 
+    outfile = open(outstack, 'w') 
+    outfile.write('lam       flux_norm     err  \n') 
+    for a, b, c in zip(lam_stack, stack_spec, stack_err): 
+        outfile.write(str(a) + '  ' + str(b) + '  '  +  str(c) + '\n') 
+    outfile.close() 
+         
+
+    plt.plot(lam_stack, stack_spec, ls='steps-mid')  
+
+
+
+
     plt.show()
 
 
