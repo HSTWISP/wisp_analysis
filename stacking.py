@@ -96,7 +96,8 @@ def stack_spec(inlist, outstack, bootstrap = None):
                 lam_spec_rest = lam_spec / (1+z) 
                 f = interpolate.interp1d(lam_spec_rest, flam_norm, fill_value=-1, bounds_error=False)
                 f2 = interpolate.interp1d(lam_spec_rest, mask_spec, fill_value = -1, bounds_error = False, kind = 'nearest') 
-                flam_interp = f(lam_stack) 
+                flam_interp = f(lam_stack)
+                flam_interp = flam_interp * (1+z) ### this is required to de-redshift and maintain normalization. 
                 mask_interp = f2(lam_stack) 
                 w=np.where(mask_interp > 0) 
                 flam_interp[w] = -1 
