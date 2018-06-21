@@ -3,17 +3,17 @@ from scipy import interpolate
 import time
 
 
-def stack_spec(inlist, outstack, bootstrap = None): 
+def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap = None): 
     t0 = time.time()
     inlist_data = asciitable.read(inlist) 
     fieldname = inlist_data['col1']
     objid = inlist_data['col2']  
-    
+   
+
+
     ### find these in the data 
     #f_oiii = inlist_data['f_oiii'] 
     #z = inlist_data['z'] 
-
-
 
 
     ngals = np.size(objid) 
@@ -37,13 +37,13 @@ def stack_spec(inlist, outstack, bootstrap = None):
        
         #### 1 deterimine if the source is in WISP or not. 
         if fieldname[i][0:3] == 'Par' : 
-            if os.path.exists('/Volumes/Thunderbay/wisps/mzr_refit/' + fieldname[i] + '_output_alaina-mzr/') : 
-                specfile = '/Volumes/Thunderbay/wisps/mzr_refit/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i] + '_BEAM_' + str(objid[i]) + '_fitspec.dat' 
-                catalog  = '/Volumes/Thunderbay/wisps/mzr_refit/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + 'list_catalog_alaina-mzr.dat' 
+            if os.path.exists(path_wisp +  '/' + fieldname[i] + '_output_alaina-mzr/') : 
+                specfile = path_wisp + '/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i] + '_BEAM_' + str(objid[i]) + '_fitspec.dat' 
+                catalog  = path_wisp  + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + 'list_catalog_alaina-mzr.dat' 
 
-            elif os.path.exists('/Volumes/Thunderbay/wisps/mzr_refit/' + fieldname[i] + '_output_marc-mzr/') : 
-                specfile = '/Volumes/Thunderbay/wisps/mzr_refit/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_BEAM_' + str(objid[i]) + '_fitspec.dat' 
-                catalog  = '/Volumes/Thunderbay/wisps/mzr_refit/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + 'list_catalog_marc-mzr.dat'  
+            elif os.path.exists(path_wisp +'/' + fieldname[i] + '_output_marc-mzr/') : 
+                specfile =  path_wisp + '/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_BEAM_' + str(objid[i]) + '_fitspec.dat' 
+                catalog  =  path_wisp + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + 'list_catalog_marc-mzr.dat'  
 
             else : 
                 specfile = None 
@@ -52,12 +52,12 @@ def stack_spec(inlist, outstack, bootstrap = None):
 
         #### if not WISP, look for the 3D HST data 
         else :  
-            if os.path.exists('/Volumes/Thunderbay/3DHST/mzr_refit/' + fieldname[i] + '_output_alaina-mzr/'): 
-                specfile = '/Volumes/Thunderbay/3DHST/mzr_refit/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i]+  '_' +  '{:05d}'.format(objid[i]) + '_fitspec.dat' 
-                catalog  = '/Volumes/Thunderbay/3DHST/mzr_refit/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + '_catalog_alaina-mzr.dat' 
-            elif os.path.exists('/Volumes/Thunderbay/3DHST/mzr_refit/' + fieldname[i] + '_output_marc-mzr/'): 
-                specfile = '/Volumes/Thunderbay/3DHST/mzr_refit/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_' + '{:05d}'.format(objid[i]) + '_fitspec.dat' 
-                catalog  = '/Volumes/Thunderbay/3DHST/mzr_refit/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + '_catalog_marc-mzr.dat' 
+            if os.path.exists(path_3dhst+  '/' + fieldname[i] + '_output_alaina-mzr/'): 
+                specfile = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i]+  '_' +  '{:05d}'.format(objid[i]) + '_fitspec.dat' 
+                catalog  = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + '_catalog_alaina-mzr.dat' 
+            elif os.path.exists( path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/'): 
+                specfile = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_' + '{:05d}'.format(objid[i]) + '_fitspec.dat' 
+                catalog  = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + '_catalog_marc-mzr.dat' 
             else :
                 specfile = None 
                 catalog = None 
