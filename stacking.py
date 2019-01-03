@@ -1,13 +1,17 @@
 from wisp_analysis import * 
 from scipy import interpolate
 import time
+import scipy.integrate as integrate 
+
 
 
 def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap = None): 
     t0 = time.time()
     inlist_data = asciitable.read(inlist) 
-    fieldname = inlist_data['col1']
-    objid = inlist_data['col2']  
+    fieldname = inlist_data['Field']
+    objid = inlist_data['ID'] 
+    z_list = inlist_data['z'] 
+    foiii_list = inlist_data['foiii'] 
    
 
 
@@ -39,34 +43,34 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
         if fieldname[i][0:3] == 'Par' : 
             if os.path.exists(path_wisp +  '/' + fieldname[i] + '_output_alaina-mzr/') : 
                 specfile = path_wisp + '/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i] + '_BEAM_' + str(objid[i]) + '_fitspec.dat' 
-                catalog  = path_wisp  + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + 'list_catalog_alaina-mzr.dat' 
+               # catalog  = path_wisp  + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + 'list_catalog_alaina-mzr.dat' 
 
             elif os.path.exists(path_wisp +'/' + fieldname[i] + '_output_marc-mzr/') : 
                 specfile =  path_wisp + '/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_BEAM_' + str(objid[i]) + '_fitspec.dat' 
-                catalog  =  path_wisp + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + 'list_catalog_marc-mzr.dat'  
+               # catalog  =  path_wisp + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + 'list_catalog_marc-mzr.dat'  
 
             else : 
                 specfile = None 
-                catalog = None 
+                #catalog = None 
                 print 'Could not find fit data directory for ' + fieldname[i] 
 
         #### if not WISP, look for the 3D HST data 
         else :  
             if os.path.exists(path_3dhst+  '/' + fieldname[i] + '_output_alaina-mzr/'): 
                 specfile = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i]+  '_' +  '{:05d}'.format(objid[i]) + '_fitspec.dat' 
-                catalog  = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + '_catalog_alaina-mzr.dat' 
+                #catalog  = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + '_catalog_alaina-mzr.dat' 
             elif os.path.exists( path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/'): 
                 specfile = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_' + '{:05d}'.format(objid[i]) + '_fitspec.dat' 
-                catalog  = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + '_catalog_marc-mzr.dat' 
+                #catalog  = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + '_catalog_marc-mzr.dat' 
             else :
                 specfile = None 
-                catalog = None 
+                #catalog = None 
                 print 'Could not find fit data directory for ' + fieldname[i]   
 
         if specfile is not None: 
-            if os.path.exists(specfile)  & os.path.exists(catalog) : 
+            if os.path.exists(specfile) : 
                 specdata = asciitable.read(specfile, fill_values=[('--', '-99')]) 
-                catdata = asciitable.read(catalog, fill_values=[('--', '-99')])  
+                #catdata = asciitable.read(catalog, fill_values=[('--', '-99')])  
 
                 ##### get spectrum 
                 lam_spec = specdata['Lam'] 
@@ -75,20 +79,22 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
                 mask_spec = specdata['Masked'] 
 
 
-                #### locate redshift and oiii flux 
-                cat_objid = catdata['ObjID'] 
-                cat_z = catdata['redshift'] 
-                cat_foiii = catdata['oiii_flux'] 
+                ##### locate redshift and oiii flux 
+                #cat_objid = catdata['ObjID'] 
+                #cat_z = catdata['redshift'] 
+                #cat_foiii = catdata['oiii_flux'] 
 
-                w=np.where(cat_objid == objid[i]) 
-                f_oiii = cat_foiii[w[0]]
-                z = cat_z[w[0]]
+                #w=np.where(cat_objid == objid[i]) 
+                f_oiii = foiii_list[i]
+                z = z_list[i]
                 
                 ### why the hell are some objects cataloged more than once? 
-                if np.size(f_oiii) > 1: 
-                    f_oiii = f_oiii[0] 
-                if np.size(z) > 1 : 
-                    z = z[0] 
+                ### I can't remember, but use the last one.
+                ###  this should be gone. 
+                #if np.size(f_oiii) > 1: 
+                #    f_oiii = f_oiii[-1] 
+                #if np.size(z) > 1 : 
+                #    z = z[-1] 
 
                 #### de-redshift the spectrum and insert into 2d array 
                 #print np.size(flam_spec), np.size(cont_spec), objid[i], f_oiii, z
@@ -98,6 +104,11 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
                 f2 = interpolate.interp1d(lam_spec_rest, mask_spec, fill_value = -1, bounds_error = False, kind = 'nearest') 
                 flam_interp = f(lam_stack)
                 flam_interp = flam_interp * (1+z) ### this is required to de-redshift and maintain normalization. 
+                
+                #w=np.where( (lam_stack > 4907)  & (lam_stack < 5107)) 
+                #print integrate.trapz(flam_interp[w], lam_stack[w]) 
+
+
                 mask_interp = f2(lam_stack) 
                 w=np.where(mask_interp > 0) 
                 flam_interp[w] = -1 
@@ -108,12 +119,12 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
             else:  
                 if os.path.exists(specfile) == False :
                     print 'Could not find : ' + specfile 
-                if os.path.exists(catalog) == False :
-                    print 'Could not find :' + catalog 
+               # if os.path.exists(catalog) == False :
+                  #print 'Could not find :' + catalog 
 
-    #hdu = fits.PrimaryHDU(stack_frame)
-    #hdu1 = fits.HDUList([hdu]) 
-    #hdu1.writeto('test.fits')
+   # hdu = fits.PrimaryHDU(stack_frame)
+   # hdu1 = fits.HDUList([hdu]) 
+   # hdu1.writeto('test.fits')
 
     #plt.imshow(stack_frame) 
     #plt.show() 
@@ -162,7 +173,7 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
     outfile.close() 
          
 
-    plt.plot(lam_stack, stack_spec, ls='steps-mid')  
+    #plt.plot(lam_stack, stack_spec, ls='steps-mid')  
 
 
 

@@ -78,7 +78,7 @@ def measure_stack(input_stack, output_meas, output_fig):
     pguess[10] = 0.0001
     pguess[11] = 0.0001
     pguess[12] = 0.0003 
-    pguess[13] = 0.0000
+    pguess[13] = 0.0000   #### set nii and he1 to zero, even though they are in the model and can be added. 
     pguess[14] = 0.0000
 
     npars = len(pguess) 
@@ -97,63 +97,65 @@ def measure_stack(input_stack, output_meas, output_fig):
 
 
     ### gather line fluxes 
-    ### ha 
-    ha_flux = np.sqrt(2  * math.pi) *  out.params[3] * out.params[1] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    ### ha  
+    ### note that nii  and he1 are set to zero.  This means that this is Ha + NII
+    ### and I'm not sure if He 1 is included in the flux or resolved, or something in between 
+    ha_flux = np.sqrt(2  * math.pi) *  out.params[3] * out.params[1]    ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[3][1] / (out.params[3] * out.params[1])
     ha_err =  ha_flux * np.sqrt( (out.perror[3]/out.params[3])**2 + (out.perror[1]/out.params[1])**2 + covar_term) 
 
     ##hb 
-    hb_flux = np.sqrt(2  * math.pi) *  out.params[4] * out.params[2] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    hb_flux = np.sqrt(2  * math.pi) *  out.params[4] * out.params[2] ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[4][2] / (out.params[4] * out.params[2])
     hb_err =  hb_flux * np.sqrt( (out.perror[4]/out.params[4])**2 + (out.perror[2]/out.params[2])**2 + covar_term)  
 
 
     ##hg 
-    hg_flux = np.sqrt(2  * math.pi) *  out.params[5] * out.params[2] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    hg_flux = np.sqrt(2  * math.pi) *  out.params[5] * out.params[2]     ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[5][2] / (out.params[5] * out.params[2])
     hg_err =  hg_flux * np.sqrt( (out.perror[5]/out.params[5])**2 + (out.perror[2]/out.params[2])**2 + covar_term)  
 
     ### hd 
-    hd_flux = np.sqrt(2  * math.pi) *  out.params[6] * out.params[0] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    hd_flux = np.sqrt(2  * math.pi) *  out.params[6] * out.params[0]   ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[6][0] / (out.params[6] * out.params[0])
     hd_err =  hd_flux * np.sqrt( (out.perror[6]/out.params[6])**2 + (out.perror[0]/out.params[0])**2 + covar_term)
 
     ### oiii BOTH LINES
-    oiii_flux = 1.3 * np.sqrt(2  * math.pi) *  out.params[7] * out.params[1] / 2.35
-    covar_term = 2  * out.covar[7][1] / (out.params[7] * out.params[1]) 
-    oiii_err =  oiii_flux * np.sqrt( (out.perror[7]/out.params[7])**2 + (out.perror[1]/out.params[1])**2 + covar_term) 
+    oiii_flux = 1.3 * np.sqrt(2  * math.pi) *  out.params[7] * out.params[2] 
+    covar_term = 2  * out.covar[7][2] / (out.params[7] * out.params[2]) 
+    oiii_err =  oiii_flux * np.sqrt( (out.perror[7]/out.params[7])**2 + (out.perror[2]/out.params[2])**2 + covar_term) 
 
-    ### hd 
-    oii_flux = np.sqrt(2  * math.pi) *  out.params[8] * out.params[0] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    ### oii
+    oii_flux = np.sqrt(2  * math.pi) *  out.params[8] * out.params[0]   ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[8][0] / (out.params[8] * out.params[0])
     oii_err =  oii_flux * np.sqrt( (out.perror[8]/out.params[8])**2 + (out.perror[0]/out.params[0])**2 + covar_term)
 
-    ### hd 
-    sii_flux = np.sqrt(2  * math.pi) *  out.params[9] * out.params[1] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    ### sii
+    sii_flux = np.sqrt(2  * math.pi) *  out.params[9] * out.params[1]    ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[9][1] / (out.params[9] * out.params[1])
     sii_err =  sii_flux * np.sqrt((out.perror[9]/out.params[9])**2 + (out.perror[1]/out.params[1])**2 + covar_term) 
 
 
-    #### 
-    he1_5876_flux = np.sqrt(2  * math.pi) *  out.params[10] * out.params[1] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    #### he1 5876
+    he1_5876_flux = np.sqrt(2  * math.pi) *  out.params[10] * out.params[1]    ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[10][1] / (out.params[10] * out.params[1])
     he1_5876_err =  he1_5876_flux * np.sqrt((out.perror[10]/out.params[10])**2 + (out.perror[1]/out.params[1])**2 + covar_term)  
 
 
     ### oi BOTH lines 
-    oi_flux = 1.3 * np.sqrt(2  * math.pi) *  out.params[11] * out.params[1] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    oi_flux = 1.3 * np.sqrt(2  * math.pi) *  out.params[11] * out.params[1]    ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[11][1] / (out.params[11] * out.params[1])
     oi_err =  oi_flux * np.sqrt((out.perror[11]/out.params[11])**2 + (out.perror[1]/out.params[1])**2 + covar_term)
 
 
     #### Ne III 3870 BLEND
-    neiii_flux = 1.3 * np.sqrt(2  * math.pi) *  out.params[12] * out.params[0] / 2.35    ## sqrt(2 * pi) * amplitude * sigma 
+    neiii_flux = np.sqrt(2  * math.pi) *  out.params[12] * out.params[0]     ## sqrt(2 * pi) * amplitude * sigma 
     covar_term = 2  * out.covar[12][0] / (out.params[12] * out.params[0])
     neiii_err =  neiii_flux * np.sqrt((out.perror[12]/out.params[12])**2 + (out.perror[0]/out.params[0])**2 + covar_term)
 
 
     output = open(output_meas, 'w') 
-    output.write('Ha+ NII            ' + str(ha_flux) + '  ' + str(ha_err) + '\n') 
+    output.write('Ha+ NII            ' + str(ha_flux) + '  ' + str(ha_err) + '\n')   ### the ha_flux corresponds only to Ha + NII because the nii amp in the model is fixed at zero.
     output.write('Hb                 ' + str(hb_flux) + '  ' + str(hb_err) + '\n') 
     output.write('Hg + OIII          ' + str(hg_flux) + '  ' + str(hg_err) + '\n') 
     output.write('Hd                 ' + str(hd_flux) + '  ' + str(hd_err) + '\n') 
@@ -166,6 +168,9 @@ def measure_stack(input_stack, output_meas, output_fig):
 
     output.close() 
 
+
+    #plt.axvline(x = 5007 - 100) 
+    #plt.axvline(x = 5007 + 100)
 
     
 
