@@ -1,7 +1,6 @@
 #### this code makes subsamples for using with the stacking code. a host of various cuts will be included.  
 ### run in directory where the catalogs live. 
-### will spit out subsample catalog files in the same directory.  
-### SIMPLE. 
+
 
 import astropy.io.fits as fits
 import astropy.io.ascii as asciitable 
@@ -24,7 +23,12 @@ wispcat = hdu3[1].data   ### this extra list is necessary because the par number
 
 ####### 3DHST CATALOGS AND PATHS 
 hdu1 = fits.open('selected_c_cami.fits')
-path_3dhst = '/Volumes/Thunderbay/3DHST/mzr_refit/' 
+path_3dhst = '/Volumes/Thunderbay/3DHST/mzr_refit/'
+
+
+### agn matches 
+xray = asciitable.read('../agn/xray_matches', format = 'no_header') 
+donley = asciitable.read('../agn/donley_agn', format = 'no_header') 
 
 
 #### extra steps for 3dhst cats. 
@@ -61,6 +65,7 @@ fsii_3dhst = []
 esii_3dhst = [] 
 foii_3dhst = []
 eoii_3dhst = [] 
+ew_oiii_obs_3dhst  = [] 
 
 
 for fieldname in fields: 
@@ -151,6 +156,8 @@ for fieldname in fields:
             esii_3dhst.append(catalog_data['sii_err'][w[0][-1]])
             foii_3dhst.append(catalog_data['oii_flux'][w[0][-1]]) 
             eoii_3dhst.append(catalog_data['oii_err'][w[0][-1]])
+            ew_oiii_obs_3dhst.append(catalog_data['oiii_EW_obs'][w[0][-1]])
+
     
 
         else: 
@@ -203,6 +210,12 @@ fsii_wisp = []
 esii_wisp = []
 foii_wisp = [] 
 eoii_wisp  = []
+
+ew_oiii_obs_wisp = [] 
+
+
+
+
 
 for i  in np.arange(len(par_parent)): 
 
@@ -296,6 +309,7 @@ for i  in np.arange(len(par_parent)):
         esii_wisp.append(catalog_data['sii_err'][w[0][-1]])
         foii_wisp.append(catalog_data['oii_flux'][w[0][-1]]) 
         eoii_wisp.append(catalog_data['oii_err'][w[0][-1]])
+        ew_oiii_obs_wisp.append(catalog_data['oiii_EW_obs'][w[0][-1]])
 
 
 
@@ -352,6 +366,9 @@ esii = np.append(esii_wisp, esii_3dhst)
 foii = np.append(foii_wisp, foii_3dhst) 
 eoii  = np.append(eoii_wisp, eoii_3dhst) 
 
+ew_oiii_obs = np.append(ew_oiii_obs_wisp, ew_oiii_obs_3dhst) 
+
+
 
 ### remove a few more bad objects with zero error or foiii = -1 
 w=np.where( (foiii > 0) & (eoiii > 0) & (z > 1.2))  
@@ -370,6 +387,8 @@ fsii = fsii[w]
 esii = esii[w]
 foii = foii[w]
 eoii = eoii[w]
+ew_oiii_obs = ew_oiii_obs[w] 
+
 
 print 'number of objects after OIII no cov,  OIII err = 0, z<1.2  removed'  
 print np.size(field), np.size(objid), np.size(logm), np.size(z), np.size(foiii), np.size(eoiii)
@@ -397,12 +416,33 @@ agn_flag = np.where((oiiihb > ymex_lower_obj) & (logm >0))
 mex_flag[agn_flag] = 1 
 
 
+xray_agn_flag = np.zeros(len(z)) 
 
-data = [field, objid, logm, z, foiii, eoiii, fhb, ehb, fha, eha, fsii, esii, foii, eoii, mex_flag] 
-colnames = ['Field', 'ID', 'logM', 'z', 'foiii', 'eoiii', 'fhb', 'ehb', 'fhanii', 'ehanii', 'fsii', 'esii', 'foii', 'eoii', 'MeX_AGN'] 
+xray_field = xray['col1'] 
+xray_id = xray['col2'] 
+
+for i in np.arange(len(xray_id)): 
+    w=np.where( (field == xray_field[i]) & (objid == xray_id[i])) 
+    if len(w[0]) == 1: 
+        xray_agn_flag[w] = 1. 
+
+ir_agn_flag = np.zeros(len(z)) 
+ir_field = donley['col1'] 
+ir_id = donley['col2'] 
 
 
-asciitable.write(data, 'master_stacklist', names = colnames, overwrite = True) 
+for i in np.arange(len(ir_id)):
+    w=np.where((field == ir_field[i]) & (objid == ir_id[i]))
+    if len(w[0]) == 1:
+        ir_agn_flag[w] = 1.
+
+
+
+
+data = [field, objid, logm, z, foiii, eoiii, ew_oiii_obs, fhb, ehb, fha, eha, fsii, esii, foii, eoii, mex_flag, xray_agn_flag, ir_agn_flag] 
+colnames = ['Field', 'ID', 'logM', 'z', 'foiii', 'eoiii', 'EW_oiii_obs', 'fhb', 'ehb', 'fhanii', 'ehanii', 'fsii', 'esii', 'foii', 'eoii', 'MeX_AGN', 'Xray', 'IR_AGN'] 
+
+asciitable.write(data, 'master_stacklist.v013019', names = colnames, overwrite = True) 
 
 
 
