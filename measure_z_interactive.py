@@ -446,7 +446,7 @@ def plot_object(zguess, zfit, spdata, config_pars, snr_meas_array,  snr_tot_othe
     plt.draw()
 
 
-def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_data = ' '):
+def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, commentsfile, remaining, allobjects, show_dispersed=True, stored_fits = False, path_to_data = ' ', auto = False):
     """An attempt to move all object-specific tasks
     """
     # set up and filenames
@@ -482,40 +482,42 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
 
     availgrism = 'both' if availgrism == 'g102g141' else availgrism
 
-    g102_2d  = path_to_data +'/2D/'  + par + '_' +  obj + '_G102.2D.fits'  
-    g141_2d =  path_to_data +'/2D/'  + par + '_' +  obj +'_G141.2D.fits' 
+    if auto == False : 
 
-    if availgrism == 'both' : 
-        cmd  = 'xpaset -p ds9 tile grid layout 2 2'
-        os.system(cmd)
+        g102_2d  = path_to_data +'/2D/'  + par + '_' +  obj + '_G102.2D.fits'  
+        g141_2d =  path_to_data +'/2D/'  + par + '_' +  obj +'_G141.2D.fits' 
 
-        if os.path.exists(g102_2d):
-            infits = fits.open(g102_2d) 
-            direct  = infits[1].data 
-            spec = infits[5].data
-            show2dNEW(g102_2d + '[1]', 'linear', frameno = '1', zran1 = -2 * np.std(direct), zran2 = 3 * np.std(direct))
-            show2dNEW(g102_2d + '[5]', 'linear', frameno = '2', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec) ) 
-            infits.close() 
+        if availgrism == 'both' : 
+            cmd  = 'xpaset -p ds9 tile grid layout 2 2'
+            os.system(cmd)
 
-        if os.path.exists(g141_2d): 
-            infits = fits.open(g141_2d) 
-            direct = infits[1].data 
-            spec = infits[5].data 
-            show2dNEW(g141_2d + '[1]', 'linear', frameno = '3',zran1 = -2 * np.std(direct), zran2 = 3 * np.std(direct)  )
-            show2dNEW(g141_2d + '[5]', 'linear', frameno = '4', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec) )
-            infits.close()
+            if os.path.exists(g102_2d):
+                infits = fits.open(g102_2d) 
+                direct  = infits[1].data 
+                spec = infits[5].data
+                show2dNEW(g102_2d + '[1]', 'linear', frameno = '1', zran1 = -2 * np.std(direct), zran2 = 3 * np.std(direct))
+                show2dNEW(g102_2d + '[5]', 'linear', frameno = '2', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec) ) 
+                infits.close() 
 
-    else: 
-        cmd  = 'xpaset -p ds9 tile grid layout 2 1'
-        os.system(cmd)
+            if os.path.exists(g141_2d): 
+                infits = fits.open(g141_2d) 
+                direct = infits[1].data 
+                spec = infits[5].data 
+                show2dNEW(g141_2d + '[1]', 'linear', frameno = '3',zran1 = -2 * np.std(direct), zran2 = 3 * np.std(direct)  )
+                show2dNEW(g141_2d + '[5]', 'linear', frameno = '4', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec) )
+                infits.close()
 
-        if os.path.exists(g141_2d):
-            infits = fits.open(g141_2d) 
-            direct = infits[1].data 
-            spec = infits[5].data 
-            show2dNEW(g141_2d + '[1]', 'linear', frameno = '1', zran1= -2 * np.std(direct), zran2 = 3 * np.std(direct))
-            show2dNEW(g141_2d + '[5]', 'linear', frameno = '2', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec))
-            infits.close()
+        else: 
+           cmd  = 'xpaset -p ds9 tile grid layout 2 1'
+           os.system(cmd)
+
+           if os.path.exists(g141_2d):
+                infits = fits.open(g141_2d) 
+                direct = infits[1].data 
+                spec = infits[5].data 
+                show2dNEW(g141_2d + '[1]', 'linear', frameno = '1', zran1= -2 * np.std(direct), zran2 = 3 * np.std(direct))
+                show2dNEW(g141_2d + '[5]', 'linear', frameno = '2', zran1 = -2 * np.std(spec), zran2 = 5 * np.std(spec))
+                infits.close()
    
 
 
@@ -674,304 +676,303 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
                     full_contmodel, lamline, lamlines_found, 
                     index_of_strongest_line, contmodel, plottitle, outdir)
 #        print "    Guess Redshift: z = %f" % (zguess)
-        print_prompt("    Fit Redshift:   z = %f\n" % (zfit))
-        # input
-        option = raw_input("> ")
 
-        # checking user's input. keeping this format the same as before
-        # any time done is set to 1, the object is considered fit
+        if auto == False: 
 
-        # reject object
-        if option.strip().lower() == 'r':
-            done = 1
-            if len(comment) > 0: 
-                comment  = 'rejected' + ', ' + comment 
-            else : 
-                comment = 'rejected'     
-            zset = 0
+            print_prompt("    Fit Redshift:   z = %f\n" % (zfit))
+            # input
+            option = raw_input("> ")
+
+            # checking user's input. keeping this format the same as before
+            # any time done is set to 1, the object is considered fit
+
+         # reject object
+            if option.strip().lower() == 'r':
+               done = 1
+               if len(comment) > 0: 
+                  comment  = 'rejected' + ', ' + comment 
+               else : 
+                  comment = 'rejected'     
+               zset = 0
 
         # accept object
-        elif option.strip().lower() == 'a':
-            done = 1
-            zset = 1
-            flagcont = 1
+            elif option.strip().lower() == 'a':
+                done = 1
+                zset = 1
+                flagcont = 1
 
         # accept object and note contamination
-        elif option.strip().lower() == 'ac':
-            done = 1
-            zset = 1
-            flagcont = 2
-            # add to contamination flags
-            for k,v in contamflags.iteritems():
-                contamflags[k] = contamflags[k] | 1
+            elif option.strip().lower() == 'ac':
+                done = 1
+                zset = 1
+                flagcont = 2
+                # add to contamination flags
+                for k,v in contamflags.iteritems():
+                    contamflags[k] = contamflags[k] | 1
 
         # change redshift guess
-        elif option.strip().lower() == 'z':
-            print_prompt("The current redshift guess is: %f\nEnter Redshift Guess:" % zguess)
-            try:
-                zguess = float(raw_input("> "))
-            except ValueError:
-                print_prompt('Invalid Entry.')
+            elif option.strip().lower() == 'z':
+                print_prompt("The current redshift guess is: %f\nEnter Redshift Guess:" % zguess)
+                try:
+                    zguess = float(raw_input("> "))
+                except ValueError:
+                    print_prompt('Invalid Entry.')
 
         # change wavelength guess
-        elif option.strip().lower() == 'w':
-            print_prompt("The current emission line wavelength is: %f\nEnter Wavelength Guess in Angstroms:" % lamline)
-            # save previous line guess (if not Ha)
-            old_rest_wave = lamline / (1. + zguess)
-            try:
-                newwave = float(raw_input("> "))
-            except ValueError:
-                print_prompt('Invalid Entry.')
-            else:
-                zguess = newwave / old_rest_wave - 1.
-                lamline = newwave
+            elif option.strip().lower() == 'w':
+                print_prompt("The current emission line wavelength is: %f\nEnter Wavelength Guess in Angstroms:" % lamline)
+                # save previous line guess (if not Ha)
+                old_rest_wave = lamline / (1. + zguess)
+                try:
+                    newwave = float(raw_input("> "))
+                except ValueError:
+                    print_prompt('Invalid Entry.')
+                else:
+                    zguess = newwave / old_rest_wave - 1.
+                    lamline = newwave
 
-        # change the fwhm guess
-        elif option.strip().lower() == 'fw':
-            print_prompt("Enter a Guess for FWHM in pixels")
-            print_prompt("The default fwhm_fit is 3 pixels:  ")
-            try:
-                fwhm_guess = config_pars['dispersion_red'] * float(raw_input("> "))
-            except ValueError:
-                print_prompt('Invalid Entry.')
+            # change the fwhm guess
+            elif option.strip().lower() == 'fw':
+                print_prompt("Enter a Guess for FWHM in pixels")
+                print_prompt("The default fwhm_fit is 3 pixels:  ")
+                try:
+                    fwhm_guess = config_pars['dispersion_red'] * float(raw_input("> "))
+                except ValueError:
+                    print_prompt('Invalid Entry.')
 
-        # mask out 1, 2, or 3 regions of the spectrum
-        elif option.strip().lower() == 'm1':
-            print_prompt("Enter wavelength window to mask out:  blue, red:")
-            maskstr = raw_input("> ")
-            try:
-                maskwave = [float(maskstr.split(",")[0]),
-                            float(maskstr.split(",")[1])]
-            except (IndexError,ValueError):
-                print_prompt('Invalid entry. Enter wavelengths separated by commas')
-            else:
-                config_pars['mask_region1'] = maskwave
+            # mask out 1, 2, or 3 regions of the spectrum
+            elif option.strip().lower() == 'm1':
+                print_prompt("Enter wavelength window to mask out:  blue, red:")
+                maskstr = raw_input("> ")
+                try:
+                    maskwave = [float(maskstr.split(",")[0]),
+                                float(maskstr.split(",")[1])]
+                except (IndexError,ValueError):
+                    print_prompt('Invalid entry. Enter wavelengths separated by commas')
+                else:
+                    config_pars['mask_region1'] = maskwave
 
-        elif option.strip().lower() == 'm2':
-            print_prompt("Enter wavelength window to mask out:  blue, red:")
-            maskstr = raw_input("> ")
-            try:
-                maskwave = [float(maskstr.split(",")[0]),
-                            float(maskstr.split(",")[1])]
-            except (IndexError,ValueError):
-                print_prompt('Invalid entry. Enter wavelengths separated by commas')
-            else:
-                config_pars['mask_region2'] = maskwave
+            elif option.strip().lower() == 'm2':
+                print_prompt("Enter wavelength window to mask out:  blue, red:")
+                maskstr = raw_input("> ")
+                try:
+                    maskwave = [float(maskstr.split(",")[0]),
+                                float(maskstr.split(",")[1])]
+                except (IndexError,ValueError):
+                    print_prompt('Invalid entry. Enter wavelengths separated by commas')
+                else:
+                    config_pars['mask_region2'] = maskwave
 
-        elif option.strip().lower() == 'm3':
-            print_prompt("Enter wavelength window to mask out:  blue, red (Angstroms:")
-            maskstr = raw_input("> ")
-            try:
-                maskwave = [float(maskstr.split(",")[0]),
-                            float(maskstr.split(",")[1])]
-            except (IndexError,ValueError):
-                print_prompt('Invalid entry. Enter wavelengths separated by commas')
-            else:
-                config_pars['mask_region3'] = maskwave
+            elif option.strip().lower() == 'm3':
+                print_prompt("Enter wavelength window to mask out:  blue, red (Angstroms:")
+                maskstr = raw_input("> ")
+                try:
+                    maskwave = [float(maskstr.split(",")[0]),
+                                float(maskstr.split(",")[1])]
+                except (IndexError,ValueError):
+                    print_prompt('Invalid entry. Enter wavelengths separated by commas')
+                else:
+                    config_pars['mask_region3'] = maskwave
 
 
-        # change the transition wavelength between the grisms
-        elif option.strip().lower() == 't':
-            print_prompt("The current transition wavelength is: " + str(config_pars['transition_wave']) + "\nEnter the wavelength for the G102 to G141 transition:")
-            try:
-                config_pars['transition_wave'] = float(raw_input("> "))
-            except ValueError:
-                print_prompt('Invalid entry. Enter wavelength of grism transition.')
+            # change the transition wavelength between the grisms
+            elif option.strip().lower() == 't':
+                print_prompt("The current transition wavelength is: " + str(config_pars['transition_wave']) + "\nEnter the wavelength for the G102 to G141 transition:")
+                try:
+                    config_pars['transition_wave'] = float(raw_input("> "))
+                except ValueError:
+                    print_prompt('Invalid entry. Enter wavelength of grism transition.')
 
 
         # change the nodes used for the continuum spline
-        elif option.strip().lower() == 'nodes':
-            strnw = ','.join(str(nw) for nw in config_pars['node_wave'])
-            print_prompt("Enter Wavelengths for Continuum Spline: w1, w2, w3, w4, ....")
-            print_prompt("current node wavelengths are: %s" % strnw)
-            nodestr = raw_input("> ")
-            nodesplit = nodestr.split(',')
-            node_arr = []
-            try:
-                for nodelam in nodesplit:
-                    node_arr.append(float(nodelam))
-            except ValueError:
-                print_prompt('Invalid entry. Enter wavelengths separated by commas')
-            else:
-                node_arr = np.array(node_arr)
-                # sort by wavelength
-                node_arr = np.sort(node_arr)
-                config_pars['node_wave'] = node_arr 
+            elif option.strip().lower() == 'nodes':
+                strnw = ','.join(str(nw) for nw in config_pars['node_wave'])
+                print_prompt("Enter Wavelengths for Continuum Spline: w1, w2, w3, w4, ....")
+                print_prompt("current node wavelengths are: %s" % strnw)
+                nodestr = raw_input("> ")
+                nodesplit = nodestr.split(',')
+                node_arr = []
+                try:
+                    for nodelam in nodesplit:
+                        node_arr.append(float(nodelam))
+                except ValueError:
+                    print_prompt('Invalid entry. Enter wavelengths separated by commas')
+                else:
+                    node_arr = np.array(node_arr)
+                   # sort by wavelength
+                    node_arr = np.sort(node_arr)
+                    config_pars['node_wave'] = node_arr 
 
 
         # reset all options
-        elif option.strip().lower() == 'reset':
-            print_prompt("Reset configuration parameters, fwhm guess, and zguess to default values")
-            config_pars = read_config('default.config', availgrism=availgrism)
-            fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
-            # reset strongest line, too
-            index_of_strongest_line = 0
-            lamline = lamlines_found[index_of_strongest_line]
-            zguess = lamline / 5007. - 1
+            elif option.strip().lower() == 'reset':
+                print_prompt("Reset configuration parameters, fwhm guess, and zguess to default values")
+                config_pars = read_config('default.config', availgrism=availgrism)
+                fwhm_guess = 2.35 * a_image * config_pars['dispersion_red']
+                # reset strongest line, too
+                index_of_strongest_line = 0
+                lamline = lamlines_found[index_of_strongest_line]
+                zguess = lamline / 5007. - 1
             # reset contamflags
-            for k, v in contamflags.iteritems():
-                    contamflags[k] = contamflags[k] & 0 
+                for k, v in contamflags.iteritems():
+                        contamflags[k] = contamflags[k] & 0 
             ### if use stored = true, this should set us back to using the pickle file values         
 
         # change the blue cutoff of G102 (or whichever grism is present?)
-        elif option.strip().lower() == 'bluecut':
-            print_prompt("The current blue cutoff is: " + str(config_pars['lambda_min']) + "\nChange the blue cutoff of G102:")
-            try:
-                config_pars['lambda_min'] = float(raw_input("> "))
-            except ValueError:
-                print_prompt('Invalid entry. Enter wavelength of blue cutoff.')
+            elif option.strip().lower() == 'bluecut':
+                print_prompt("The current blue cutoff is: " + str(config_pars['lambda_min']) + "\nChange the blue cutoff of G102:")
+                try:
+                    config_pars['lambda_min'] = float(raw_input("> "))
+                except ValueError:
+                     print_prompt('Invalid entry. Enter wavelength of blue cutoff.')
 
 
         # change the red cutoff of G141
-        elif option.strip().lower() == 'redcut':
-            print_prompt("The current red cutoff is: " + str(config_pars['lambda_max']) + "\nChange the red cutoff of G141:")
-            try:
-                config_pars['lambda_max'] = float(raw_input("> "))
-            except ValueError:
-                print_prompt('Invalid entry. Enter wavelength of red cutoff.') 
+            elif option.strip().lower() == 'redcut':
+                print_prompt("The current red cutoff is: " + str(config_pars['lambda_max']) + "\nChange the red cutoff of G141:")
+                try:
+                    config_pars['lambda_max'] = float(raw_input("> "))
+                except ValueError:
+                    print_prompt('Invalid entry. Enter wavelength of red cutoff.') 
 
 
         # change to next brightest line
-        elif option.strip().lower() == 'n':
-            nlines_found_cwt = np.size(lamlines_found)
-            index_of_strongest_line = index_of_strongest_line + 1
-            if index_of_strongest_line < (nlines_found_cwt):
-                lamline = lamlines_found[index_of_strongest_line]
-                zguess = lamline / 6564. - 1
-            else:
-                print_prompt('There are no other automatically identified peaks. Select another option.')
-                # stay at current line 
-                index_of_strongest_line -= 1 
+            elif option.strip().lower() == 'n':
+                nlines_found_cwt = np.size(lamlines_found)
+                index_of_strongest_line = index_of_strongest_line + 1
+                if index_of_strongest_line < (nlines_found_cwt):
+                    lamline = lamlines_found[index_of_strongest_line]
+                    zguess = lamline / 6564. - 1
+                else:
+                    print_prompt('There are no other automatically identified peaks. Select another option.')
+                    # stay at current line 
+                    index_of_strongest_line -= 1 
 
 
-        # change to another line
-        elif option.strip().lower() == 'ha':
-            zguess = (lamline / lam_Halpha) - 1
-        elif option.strip().lower() == 'hb':
-            zguess = (lamline / lam_Hbeta) - 1
-        elif option.strip().lower() == 'o2':
-            zguess = (lamline / lam_Oii) - 1
-        elif option.strip().lower() == 'o31':
-            zguess = (lamline / lam_Oiii_1) - 1 
-        elif option.strip().lower() == 'o32':
-            zguess = (lamline / lam_Oiii_2) - 1 
-        elif option.strip().lower() == 's2':
-            zguess = (lamline / lam_Sii) - 1 
-        elif option.strip().lower() == 's31':
-            zguess = (lamline / lam_Siii_1) - 1
-        elif option.strip().lower() == 's32':
-            zguess = (lamline / lam_Siii_2) - 1
+            # change to another line
+            elif option.strip().lower() == 'ha':
+                zguess = (lamline / lam_Halpha) - 1
+            elif option.strip().lower() == 'hb':
+                zguess = (lamline / lam_Hbeta) - 1
+            elif option.strip().lower() == 'o2':
+                zguess = (lamline / lam_Oii) - 1
+            elif option.strip().lower() == 'o31':
+                zguess = (lamline / lam_Oiii_1) - 1 
+            elif option.strip().lower() == 'o32':
+                zguess = (lamline / lam_Oiii_2) - 1 
+            elif option.strip().lower() == 's2':
+                zguess = (lamline / lam_Sii) - 1 
+            elif option.strip().lower() == 's31':
+                zguess = (lamline / lam_Siii_1) - 1
+            elif option.strip().lower() == 's32':
+                zguess = (lamline / lam_Siii_2) - 1
 
         # note contamination
-        elif option.strip().lower() == 'contam':
-            print_prompt("Specify contamination.\nEnter a comma-separated list of identifiers choosing from:\n  o2,hg,hb,o3,ha,s2,s31,s32,he1,c(ontinuum)")
-            cf = raw_input("> ")
-            cflags = [thing.strip().lower() for thing in cf.split(',')]
-            # continuum contamination sets bit 1 for all lines and the continuum itself
-            if 'c' in cflags:
-                for k, v in contamflags.iteritems():
-                    contamflags[k] = contamflags[k] | 2
-            cflaglines = [thing for thing in cflags if thing != 'c']
-            # specific line contamination sets bit 2 for all lines
-            for contamflag in cflaglines:
-                try:
-                    contamflags[contamflag] = contamflags[contamflag] | 4
-                except KeyError:
-                    print_prompt('{} not known. Skipping'.format(contamflag))
-            # sqlite3 database support - automatically creates and initializes DB if required
-            #databaseManager.setFlags(par, obj, [(flagName, flagValue) for flagName, flagValue in contamflags.iteritems()])
+            elif option.strip().lower() == 'contam':
+                print_prompt("Specify contamination.\nEnter a comma-separated list of identifiers choosing from:\n  o2,hg,hb,o3,ha,s2,s31,s32,he1,c(ontinuum)")
+                cf = raw_input("> ")
+                cflags = [thing.strip().lower() for thing in cf.split(',')]
+                # continuum contamination sets bit 1 for all lines and the continuum itself
+                if 'c' in cflags:
+                    for k, v in contamflags.iteritems():
+                        contamflags[k] = contamflags[k] | 2
+                cflaglines = [thing for thing in cflags if thing != 'c']
+                # specific line contamination sets bit 2 for all lines
+                for contamflag in cflaglines:
+                    try:
+                        contamflags[contamflag] = contamflags[contamflag] | 4
+                    except KeyError:
+                        print_prompt('{} not known. Skipping'.format(contamflag))
 
-        # add a comment
-        elif option.strip().lower() == 'c':
-            print_prompt("Enter your comment here:") 
-            if len(comment) > 0: 
-                comment = raw_input("> ") + ', ' + comment 
-            else : 
-                comment = raw_input("> ") 
-            # sqlite3 database support - automatically creates and initializes DB if required
-           # databaseManager.saveAnnotation((par, obj, comment.decode('utf-8')))
+            # add a comment
+            elif option.strip().lower() == 'c':
+                print_prompt("Enter your comment here:") 
+                if len(comment) > 0: 
+                    comment = raw_input("> ") + ', ' + comment 
+                else : 
+                    comment = raw_input("> ") 
 
         # set or unset one or more flags
-        elif option.strip().lower() == 'flag':
-            print_prompt('Enter a comma-separated list of flag, value pairs e.g. CONTAM, 1, CONTIN, 2:')
-            print_prompt('Valid flags are {}'.format(WISPLFDatabaseManager.WISPLFDatabaseManager.validMutableFlags))
-            flagList = raw_input("> ")
+            elif option.strip().lower() == 'flag':
+                print_prompt('Enter a comma-separated list of flag, value pairs e.g. CONTAM, 1, CONTIN, 2:')
+                print_prompt('Valid flags are {}'.format(WISPLFDatabaseManager.WISPLFDatabaseManager.validMutableFlags))
+                flagList = raw_input("> ")
             # sqlite3 database support - automatically creates and initializes DB if required
             #databaseManager.setFlagsFromString(par, obj, flagList.decode('utf-8'))
 
-        # write object summary
-        elif option.strip().lower() == 's':
-            write_object_summary(par, obj, fitresults, snr_meas_array,
-                                 contamflags, summary_type='working')
+            # write object summary
+            elif option.strip().lower() == 's':
+                write_object_summary(par, obj, fitresults, snr_meas_array,
+                                     contamflags, summary_type='working')
 
-        # print help message
-        elif option.strip().lower() == 'h':
-            print_help_message()
-
-
-        # change g102 2d stamp scaling to zscale
-        elif option.strip().lower() == 'zs102':
-            print_prompt("Enter comma-separated range for G102 zscale: z1,z2")
-            zscale = raw_input("> ")
-            zs = zscale.split(',')
-            try:
-                z1 = float(zs[0])
-                z2 = float(zs[1])
-            except ValueError:
-                print_prompt('Invalid entry.')
-            else:
-                if os.path.exists(g102_2d) : 
-                    show2dNEW(g102_2d + '[5]', 'linear', frameno = '2', zran1 = z1, zran2 = z2 )
+            # print help message
+            elif option.strip().lower() == 'h':
+                print_help_message()
 
 
-        # change g141 2d stamp scaling to zscale
-        elif option.strip().lower() == 'zs141':
-            print_prompt("Enter comma-separated range for G141 zscale: z1,z2")
-            zscale = raw_input("> ")
-            zs = zscale.split(',')
-            try:
-                z1 = float(zs[0])
-                z2 = float(zs[1])
-            except ValueError:
-                print_prompt('Invalid entry.')
-            else:
-                if os.path.exists(g141_2d):
-                    if availgrism == 'both' :
-                         show2dNEW(g141_2d + '[5]', 'linear', frameno = '4', zran1 = z1, zran2 = z2 )
-                    else:
-                         show2dNEW(g141_2d + '[5]', 'linear', frameno = '2', zran1 = z1, zran2 = z2 ) 
-
-
-        elif option.strip().lower() == 'zsimj':
-            print_prompt("Enter comma-separated range for G102-direct zscale: z1,z2")
-            zscale = raw_input("> ")
-            zs = zscale.split(',')
-            try:
-                z1 = float(zs[0])
-                z2 = float(zs[1])
-            except ValueError:
-                print_prompt('Invalid entry.')
-            else:
-                if os.path.exists(g102_2d) : 
-                    show2dNEW(g102_2d + '[1]', 'linear', frameno = '1', zran1 = z1, zran2 = z2 )
+            # change g102 2d stamp scaling to zscale
+            elif option.strip().lower() == 'zs102':
+                print_prompt("Enter comma-separated range for G102 zscale: z1,z2")
+                zscale = raw_input("> ")
+                zs = zscale.split(',')
+                try:
+                    z1 = float(zs[0])
+                    z2 = float(zs[1])
+                except ValueError:
+                    print_prompt('Invalid entry.')
+                else:
+                    if os.path.exists(g102_2d) : 
+                        show2dNEW(g102_2d + '[5]', 'linear', frameno = '2', zran1 = z1, zran2 = z2 )
 
 
         # change g141 2d stamp scaling to zscale
-        elif option.strip().lower() == 'zsimh':
-            print_prompt("Enter comma-separated range for G141-direct zscale: z1,z2")
-            zscale = raw_input("> ")
-            zs = zscale.split(',')
-            try:
-                z1 = float(zs[0])
-                z2 = float(zs[1])
-            except ValueError:
-                print_prompt('Invalid entry.')
-            else:
-                if os.path.exists(g141_2d):
-                    if availgrism == 'both' :
-                         show2dNEW(g141_2d + '[1]', 'linear', frameno = '3', zran1 = z1, zran2 = z2 )
-                    else:
-                         show2dNEW(g141_2d + '[1]', 'linear', frameno = '1', zran1 = z1, zran2 = z2 ) 
+            elif option.strip().lower() == 'zs141':
+                print_prompt("Enter comma-separated range for G141 zscale: z1,z2")
+                zscale = raw_input("> ")
+                zs = zscale.split(',')
+                try:
+                    z1 = float(zs[0])
+                    z2 = float(zs[1])
+                except ValueError:
+                    print_prompt('Invalid entry.')
+                else:
+                    if os.path.exists(g141_2d):
+                        if availgrism == 'both' :
+                             show2dNEW(g141_2d + '[5]', 'linear', frameno = '4', zran1 = z1, zran2 = z2 )
+                        else:
+                             show2dNEW(g141_2d + '[5]', 'linear', frameno = '2', zran1 = z1, zran2 = z2 ) 
+
+
+            elif option.strip().lower() == 'zsimj':
+                print_prompt("Enter comma-separated range for G102-direct zscale: z1,z2")
+                zscale = raw_input("> ")
+                zs = zscale.split(',')
+                try:
+                    z1 = float(zs[0])
+                    z2 = float(zs[1])
+                except ValueError:
+                    print_prompt('Invalid entry.')
+                else:
+                    if os.path.exists(g102_2d) : 
+                        show2dNEW(g102_2d + '[1]', 'linear', frameno = '1', zran1 = z1, zran2 = z2 )
+
+
+            # change g141 2d stamp scaling to zscale
+            elif option.strip().lower() == 'zsimh':
+                print_prompt("Enter comma-separated range for G141-direct zscale: z1,z2")
+                zscale = raw_input("> ")
+                zs = zscale.split(',')
+                try:
+                    z1 = float(zs[0])
+                    z2 = float(zs[1])
+                except ValueError:
+                    print_prompt('Invalid entry.')
+                else:
+                    if os.path.exists(g141_2d):
+                        if availgrism == 'both' :
+                             show2dNEW(g141_2d + '[1]', 'linear', frameno = '3', zran1 = z1, zran2 = z2 )
+                        else:
+                             show2dNEW(g141_2d + '[1]', 'linear', frameno = '1', zran1 = z1, zran2 = z2 ) 
                          
 
 
@@ -992,30 +993,42 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         #    reloadReg()
 
         ### new options dealing with iterating objects ###
-        # can't actually go back or choose another object now,
+        # can't actually go  back or choose another object now,
         # but allow for them now just in case
-        elif option.strip().lower() == 'b':
-            print_prompt('Please either reject or accept this object first.')
-        elif 'obj' in option:
-            print_prompt('Please either reject or accept this object first.')
-        # print remaining objects that have not yet been inspected
-        elif option.strip().lower() == 'left':
-            print_prompt('Remaining objects:')
-            print remaining
-        # print all objects in line list
-        elif option.strip().lower() == 'list':
-            print_prompt('All objects:')
-            print allobjects
+        
+            elif option.strip().lower() == 'b':
+                print_prompt('Please either reject or accept this object first.')
+            elif 'obj' in option:
+                print_prompt('Please either reject or accept this object first.')
+            # print remaining objects that have not yet been inspected
+            elif option.strip().lower() == 'left':
+                print_prompt('Remaining objects:')
+                print remaining
+            # print all objects in line list
+            elif option.strip().lower() == 'list':
+                print_prompt('All objects:')
+                print allobjects
 
-        # quit this object
-        elif option.strip().lower() == 'q':
-            #print_prompt('Quitting Obj %s. Nothing saved to file' % (obj))
-            #print_prompt('-' * 72)
-            return 0
+            # quit this object
+            elif option.strip().lower() == 'q':
+                #print_prompt('Quitting Obj %s. Nothing saved to file' % (obj))
+                #print_prompt('-' * 72)
+                return 0
 
-        # catch-all for everything else
-        else:
-            print_prompt("Invalid entry.  Try again.")
+             # catch-all for everything else
+            else:
+                print_prompt("Invalid entry.  Try again.")
+
+
+        else:   #### auto = True case -- just accept fitwithout looking. 
+            done = 1
+            zset = 1
+            flagcont = 1
+
+
+
+
+            
 
     # only re-save data if the previous fit was discarded
     if rejectPrevFit :
@@ -1025,6 +1038,9 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
                     full_contmodel, lamline, lamlines_found, 
                     index_of_strongest_line, contmodel, plottitle, 
                     outdir, zset=zset)
+
+
+        
 
         # write to file if object was accepted
         if zset == 1:
@@ -1094,7 +1110,7 @@ def check_input_objid(objlist, objid, nextup):
     return objid
 
 
-def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored_fits = ' ', print_colors=True):
+def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored_fits = ' ', print_colors=True, auto = False):
     # turn off color printing to terminal if required
     if print_colors is False:
         global setcolors
@@ -1137,7 +1153,7 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
     #else:
     #    print_prompt('Found line list file: %s' % (linelistfile), prompt_type='interim')
 
-    linelistfile =  path_to_data + '/selected_updated.fits'
+    linelistfile =  path_to_data + '/selected_culled.fits'
 
     #### STEP 1b:   read the list of candidate lines  ####################
     ###########################################################################
@@ -1298,48 +1314,58 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
         # do some things as long as there are still objects to inspect
         next_obj = remaining_objects[0]
         print_prompt('Next up: Obj %i' % (next_obj),prompt_type='interim')
-        o = raw_input(
-            "Enter 'xxx' to skip to Obj xxx or hit any key to continue. > ")
 
+        if auto == False: 
+
+            o = raw_input(
+                "Enter 'xxx' to skip to Obj xxx or hit any key to continue. > ")
         
-        if o.strip().lower() == 'left':
-            #remaining_list = ', '.join(['%i'%i for i in remaining_objects])
-            print_prompt('Remaining objects:', prompt_type='interim')
-            print remaining_objects
-            o = raw_input('> ')
+        
+            if o.strip().lower() == 'left':
+                #remaining_list = ', '.join(['%i'%i for i in remaining_objects])
+                print_prompt('Remaining objects:', prompt_type='interim')
+                print remaining_objects
+                o = raw_input('> ')
 
-        if o.strip().lower() == 'list':
-            print_prompt('All objects:', prompt_type='interim')
-            print allobjects
-            o = raw_input('> ')
+            if o.strip().lower() == 'list':
+                print_prompt('All objects:', prompt_type='interim')
+                print allobjects
+                o = raw_input('> ')
 
-        if o.strip().lower() == 'b':
-            previous_obj = int(objid_done[-1])
-            # need to figure out what object came before this one
-            #w = np.where(objid_unique == remaining_objects[0])
-            # if on first object, this will roll around to previous object
-            next_obj = previous_obj
-            print_prompt("Going back to previous object: Obj %i" % (next_obj),prompt_type='interim')
+            if o.strip().lower() == 'b':
+                previous_obj = int(objid_done[-1])
+                # need to figure out what object came before this one
+                #w = np.where(objid_unique == remaining_objects[0])
+                # if on first object, this will roll around to previous object
+                next_obj = previous_obj
+                print_prompt("Going back to previous object: Obj %i" % (next_obj),prompt_type='interim')
 
-        elif o.strip().lower() == 'q':
-            print_prompt("Quitting; saved through previously completed object.",prompt_type='interim')
-            return 0
+            elif o.strip().lower() == 'q':
+                print_prompt("Quitting; saved through previously completed object.",prompt_type='interim')
+                return 0
 
-        elif o.strip().lower() == 'random':
-            print_prompt('Hi Vihang!', prompt_type='random')
-            next_obj_idx = np.random.randint(remaining_objects.shape[0])
-            next_obj = remaining_objects[next_obj_idx]
+            elif o.strip().lower() == 'random':
+                print_prompt('Hi Vihang!', prompt_type='random')
+                next_obj_idx = np.random.randint(remaining_objects.shape[0])
+                next_obj = remaining_objects[next_obj_idx]
 
-        elif isFloat(o.strip()):
-            next_obj = int(re.search('\d+', o).group())
-            # confirm that requested object is in line list
+            elif isFloat(o.strip()):
+                next_obj = int(re.search('\d+', o).group())
+                # confirm that requested object is in line list
+                next_obj = check_input_objid(objid, next_obj, remaining_objects[0])
+                next_obj = next_obj if next_obj else remaining_objects[0]
+            elif 'obj' in o:
+                next_obj = int(re.search('\d+', o).group())
+                # confirm that requested object is in line list
+                next_obj = check_input_objid(objid, next_obj, remaining_objects[0])
+                next_obj = next_obj if next_obj else remaining_objects[0]
+        
+        else: 
             next_obj = check_input_objid(objid, next_obj, remaining_objects[0])
             next_obj = next_obj if next_obj else remaining_objects[0]
-        elif 'obj' in o:
-            next_obj = int(re.search('\d+', o).group())
-            # confirm that requested object is in line list
-            next_obj = check_input_objid(objid, next_obj, remaining_objects[0])
-            next_obj = next_obj if next_obj else remaining_objects[0]
+
+           
+                
 
         
         # pass the information for this object
@@ -1353,9 +1379,12 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
 
             ### get pickle files: 
             inpickles = [] 
+            path_pickle0 = path_to_stored_fits + '/'  + dofield + '_output_combined-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'  
             path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'  
             path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' +  dofield + '_' + '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'
             
+            if os.path.exists(path_pickle0):
+                inpickles.append(path_pickle0) 
             if os.path.exists(path_pickle1): 
                 inpickles.append(path_pickle1) 
             if os.path.exists(path_pickle2): 
@@ -1370,13 +1399,13 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
             inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                 lamlines_found,  linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
-                                  stored_fits = inpickles, path_to_data = path_to_data) 
+                                  stored_fits = inpickles, path_to_data = path_to_data, auto = auto) 
              
         else: 
             inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                             lamlines_found, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
-                            stored_fits = False, path_to_data = path_to_data) 
+                            stored_fits = False, path_to_data = path_to_data, auto = auto) 
 
         objid_done = np.append(objid_done, next_obj)
         remaining_objects = get_remaining_objects(objid, objid_done)
@@ -1402,10 +1431,13 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
                     if (use_stored_fits == True):
 
                        inpickles = [] 
+                       path_pickle0 = path_to_stored_fits + '/'  + dofield + '_output_combined-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle' 
                        path_pickle1 = path_to_stored_fits + '/'  + dofield + '_output_alaina-mzr/fitdata/' + dofield + '_' +   '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'  
                        path_pickle2 = path_to_stored_fits + '/'  + dofield + '_output_marc-mzr/fitdata/' +  dofield + '_' + '{:05d}'.format(int(next_obj)) + '_fitspec.pickle'
-            
-
+           
+           
+                       if os.path.exists(path_pickle0): 
+                          inpickles.append(path_pickle0) 
                        if os.path.exists(path_pickle1): 
                           inpickles.append(path_pickle1) 
                        if os.path.exists(path_pickle2): 
@@ -1422,12 +1454,12 @@ def measure_z_interactive(path_to_data = ' ', dofield = 'AEGIS',  path_to_stored
                         inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                                 lamlines_found,  linelistoutfile, commentsfile, 
                                 remaining_objects, allobjects, 
-                                  stored_fits = inpickles, path_to_data = path_to_data) 
+                                  stored_fits = inpickles, path_to_data = path_to_data, auto = auto) 
                     else: 
                         inspect_object(user, field[0], '{:05d}'.format(int(next_obj)), zguess_obj, 
                             lamlines_found, linelistoutfile, commentsfile, 
                             remaining_objects, allobjects, 
-                            stored_fits = False, path_to_data = path_to_data) 
+                            stored_fits = False, path_to_data = path_to_data, auto = auto) 
 
 
                 else:
