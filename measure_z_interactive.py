@@ -455,8 +455,8 @@ def inspect_object(user, par, obj, zguess_obj, lamlines_found, linelistoutfile, 
         specnameg102 = '%s_%s_G102.1D.dat' % (par, obj)
         specnameg141 = '%s_%s_G141.1D.dat' % (par, obj)
     else : 
-        specnameg102 = path_to_data + '/1D/' + '%s_%s_G102.1D.dat' % (par, obj)
-        specnameg141 = path_to_data + '/1D/' + '%s_%s_G141.1D.dat' % (par, obj)
+        specnameg102 = path_to_data + '/1D_new/' + '%s_%s_G102.1D.dat' % (par, obj)
+        specnameg141 = path_to_data + '/1D_new/' + '%s_%s_G141.1D.dat' % (par, obj)
 
     
 
