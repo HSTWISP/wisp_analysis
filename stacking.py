@@ -138,11 +138,11 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
     stack_frame = np.zeros( (ngals, nlam))  - 1   ## fill these placeholders with -1's to mark empty data 
     stack_spec = np.zeros(nlam) - 1 
     stack_err = np.zeros(nlam) - 1 
-    cont_frame = np.zeros( (ngals, nlam)) - 1 
-    econt_frame = np.zeros( (ngals, nlam)) - 1
-    cont_stack_med = np.zeros(nlam) -1 
-    cont_stack_err = np.zeros(nlam) -1 
-    cont_stack_mean = np.zeros(nlam)-1 
+    #cont_frame = np.zeros( (ngals, nlam)) - 1 
+    #econt_frame = np.zeros( (ngals, nlam)) - 1
+    #cont_stack_med = np.zeros(nlam) -1 
+    #cont_stack_err = np.zeros(nlam) -1 
+    #cont_stack_mean = np.zeros(nlam)-1 
 
 
 
@@ -172,12 +172,12 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
 
         #### if not WISP, look for the 3D HST data 
         else :  
-            if os.path.exists(path_3dhst+  '/' + fieldname[i] + '_output_alaina-mzr/'): 
-                specfile = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/fitdata/' + fieldname[i]+  '_' +  '{:05d}'.format(objid[i]) + '_fitspec.dat' 
+            if os.path.exists(path_3dhst+  '/' + fieldname[i] + '_output_final/'): 
+                specfile = path_3dhst + '/' + fieldname[i] + '_output_final/fitdata/' + fieldname[i]+  '_' +  '{:05d}'.format(objid[i]) + '_fitspec.dat' 
                 #catalog  = path_3dhst + '/' + fieldname[i] + '_output_alaina-mzr/' + fieldname[i] + '_catalog_alaina-mzr.dat' 
-            elif os.path.exists( path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/'): 
-                specfile = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_' + '{:05d}'.format(objid[i]) + '_fitspec.dat' 
-                #catalog  = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + '_catalog_marc-mzr.dat' 
+            #elif os.path.exists( path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/'): 
+            #    specfile = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/fitdata/' + fieldname[i] + '_' + '{:05d}'.format(objid[i]) + '_fitspec.dat' 
+            #    #catalog  = path_3dhst + '/' + fieldname[i] + '_output_marc-mzr/' + fieldname[i] + '_catalog_marc-mzr.dat' 
             else :
                 specfile = None 
                 #catalog = None 
@@ -236,20 +236,20 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
                 #### de-redshift the spectrum and insert into 2d array 
                 #print np.size(flam_spec), np.size(cont_spec), objid[i], f_oiii, z
                 flam_norm = (flam_spec - cont_spec) / f_oiii 
-                flam_norm2 = (flam_spec - contam_spec) / (cont_spec - contam_spec) ### clean flam and cont-model from contam and normalize
-                err_norm2 = flam_err_spec/cont_spec 
+                #flam_norm2 = (flam_spec - contam_spec) / (cont_spec - contam_spec) ### clean flam and cont-model from contam and normalize
+                #err_norm2 = flam_err_spec/cont_spec 
                 f = interpolate.interp1d(lam_spec_rest, flam_norm, fill_value=-1, bounds_error=False)
                 f2 = interpolate.interp1d(lam_spec_rest, mask_spec, fill_value = -1, bounds_error = False, kind = 'nearest')
-                f3 = interpolate.interp1d(lam_spec_rest, flam_norm2, fill_value = -1, bounds_error = False) 
-                f4 = interpolate.interp1d(lam_spec_rest, err_norm2, fill_value = -1, bounds_error = False) 
+                #f3 = interpolate.interp1d(lam_spec_rest, flam_norm2, fill_value = -1, bounds_error = False) 
+                #f4 = interpolate.interp1d(lam_spec_rest, err_norm2, fill_value = -1, bounds_error = False) 
 
 
                 flam_interp = f(lam_stack)
                 flam_interp = flam_interp * (1+z) ### this is required to de-redshift and maintain normalization. 
 
                 ### because the spectrum has been continuum normalized, a 1+z factor is not necessary.  
-                cont_interp  = f3(lam_stack)     #  * (1 + z) * 4 * 3.14159 * cosmo.luminosity_distance(z).cgs.value**2
-                econt_interp = f4(lam_stack)     #  * (1 + z) * 4 * 3.14159 * cosmo.luminosity_distance(z).cgs.value**2
+               # cont_interp  = f3(lam_stack)     #  * (1 + z) * 4 * 3.14159 * cosmo.luminosity_distance(z).cgs.value**2
+               # econt_interp = f4(lam_stack)     #  * (1 + z) * 4 * 3.14159 * cosmo.luminosity_distance(z).cgs.value**2
 
                 ### integrating these spectra cont. normalized against the observed wavelegths will give observed EWs.  
                 ### integrating the cont normalized spectra against rest wavelengths will give rest EWs. 
@@ -264,10 +264,10 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
                 mask_interp = f2(lam_stack) 
                 w=np.where(mask_interp > 0) 
                 flam_interp[w] = -1 
-                cont_interp[w] = -1 
+                #cont_interp[w] = -1 
                 stack_frame[i, :] = flam_interp
-                cont_frame[i, :] = cont_interp 
-                econt_frame[i, :] = econt_interp
+                #cont_frame[i, :] = cont_interp 
+                #econt_frame[i, :] = econt_interp
 
                 #plt.plot(lam_stack, flam_interp, ls = 'steps-mid') 
                 #plt.show()
@@ -300,20 +300,20 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
         stack_spec[i] = np.median(stack_frame[w, i])   
         stack_err[i] = np.std(stack_frame[w, i]) / np.sqrt(np.size(w))
    
-        w=np.where(cont_frame[:, i] > -1)   
+        #w=np.where(cont_frame[:, i] > -1)   
         ### convert stacked spectra back into the flux units for the median redshift. 
-        cont_slice = cont_frame[w, i] 
-        econt_slice = econt_frame[w, i] 
+        #cont_slice = cont_frame[w, i] 
+        #econt_slice = econt_frame[w, i] 
 
-        cont_stack_med[i] = np.median(cont_slice)  # / (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
+        #cont_stack_med[i] = np.median(cont_slice)  # / (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
         
-        out = resistant_mean(cont_slice, 2)
-        if len(out) == 3 : 
-            cont_stack_mean[i] = out[0]   #/ (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
-            cont_stack_err[i]   = out[1]  #/ (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
-        else : 
-            cont_stack_mean[i] = 0.
-            cont_stack_err[i]  = 0.
+        #out = resistant_mean(cont_slice, 2)
+        #if len(out) == 3 : 
+        #    cont_stack_mean[i] = out[0]   #/ (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
+        #    cont_stack_err[i]   = out[1]  #/ (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
+        #else : 
+        #    cont_stack_mean[i] = 0.
+        #    cont_stack_err[i]  = 0.
 
 
         #cont_stack_mean[i] = np.sum(cont_slice[goodvec] / econt_slice[goodvec]**2) / np.sum(1/econt_slice[goodvec]**2) / (1+ z_median) / (4 * 3.14159 * cosmo.luminosity_distance(z_median).cgs.value**2)
@@ -354,9 +354,9 @@ def stack_spec(inlist, outstack, path_wisp = './', path_3dhst = './', bootstrap 
 
     print 'writing output file: ' +  outstack 
     outfile = open(outstack, 'w') 
-    outfile.write('lam       flux_norm     err  median_cont    mean_cont  err_cont\n') 
-    for a, b, c, d, e, f in zip(lam_stack, stack_spec, stack_err, cont_stack_med, cont_stack_mean, cont_stack_err):  
-        outfile.write(str(a) + '  ' + str(b) + '  '  +  str(c) + '  ' + str(d) +  '  ' + str(e) + '  ' + str(f) +   '\n') 
+    outfile.write('lam       flux_norm     err\n') 
+    for a, b, c in zip(lam_stack, stack_spec, stack_err):  
+        outfile.write(str(a) + '  ' + str(b) + '  '  +  str(c) +  '\n') 
     outfile.close() 
 
 
