@@ -15,6 +15,8 @@ def stack_emline_model(pars, x, comps = False):
     sigma_he1_5876 = pars[5]   * sigma_oiiihb
     sigma_oi = pars[6]  * sigma_oiiihb
     sigma_hasii = pars[7]  * sigma_oiiihb 
+    
+    sigma_heii = pars[47] * sigma_oiiihb 
 
     unity = pars[46]  ### need this parameter for propagating errors. fix it to 1. 
 
@@ -33,6 +35,9 @@ def stack_emline_model(pars, x, comps = False):
     nii_6583_amp = pars[18] 
     he1_6678_amp = pars[19]
 
+    heii_amp = pars[48] 
+
+
     hasii_shift = pars[20] 
     oi_shift = pars[21] 
     he1_5876_shift = pars[22] 
@@ -42,11 +47,14 @@ def stack_emline_model(pars, x, comps = False):
     hd_shift = pars[26] 
     neiii_shift = pars[27] 
     oii_shift = pars[28]
+    heii_shift = pars[49] 
 
     c_3800_4200 = pars[29] 
     c_5200_6400 = pars[30]
     s_5200_6500  = pars[31]
     cnorm = pars[32]
+    c_4500_5100 = pars[51] 
+
 
 
 
@@ -61,31 +69,30 @@ def stack_emline_model(pars, x, comps = False):
     oi_amp_broad = pars[41] 
     neiii_amp_broad = pars[42]
     nii_6583_amp_broad = pars[43] 
-    he1_6678_amp_broad = pars[44] 
+    he1_6678_amp_broad = pars[44]  
+
+    heii_amp_broad = pars[50] 
 
 
     sigma_oiiihb_broad = pars[45] * sigma_oiiihb
-    
     sigma_oii_broad = pars[0] * sigma_oiiihb_broad
     sigma_neiii_broad = pars[1]  * sigma_oiiihb_broad
     sigma_hd_broad = pars[2]  * sigma_oiiihb_broad
     sigma_hg_broad = pars[3] * sigma_oiiihb_broad 
     sigma_he1_5876_broad = pars[5]   * sigma_oiiihb_broad
     sigma_oi_broad = pars[6]  * sigma_oiiihb_broad
-    sigma_hasii_broad = pars[7]  * sigma_oiiihb_broad
-
-
-
-
-
+    sigma_hasii_broad = pars[7]  * sigma_oiiihb_broad 
+    sigma_heii_broad = pars[47] * sigma_oiiihb_broad 
 
 
 
     cont = np.zeros(np.size(x)) 
-    w=np.where( (x > 3800) & (x < 4600)) 
+    w=np.where( (x > 3800) & (x < 4400)) 
     cont[w] = c_3800_4200 
     w=np.where( (x> 6000) & (x < 6450)) 
-    cont[w] = c_5200_6400 + x[w] * s_5200_6500
+    cont[w] = c_5200_6400 + x[w] * s_5200_6500 
+    w=np.where( (x > 4500) & (x < 5500)) 
+    cont[w] = c_4500_5100 
 
     cont = cont + cnorm
 
@@ -106,7 +113,8 @@ def stack_emline_model(pars, x, comps = False):
             neiii_amp * gaussian(x, 3870 + neiii_shift, sigma_neiii) +  \
             nii_6583_amp * gaussian(x, 6585.23 + hasii_shift, sigma_hasii) +  \
             nii_6583_amp / 3 * gaussian(x, 6550. + hasii_shift, sigma_hasii)+\
-            he1_6678_amp  * gaussian(x, 6680. + hasii_shift, sigma_hasii)  
+            he1_6678_amp  * gaussian(x, 6680. + hasii_shift, sigma_hasii) +\
+            heii_amp * gaussian(x, 4686. + heii_shift, sigma_heii) 
     
     model_broad =   ha_amp_broad * gaussian(x, 6564.6 + hasii_shift, sigma_hasii_broad) + \
             hb_amp_broad * gaussian(x, 4862.7 + hb_shift, sigma_oiiihb_broad)  +  \
@@ -122,10 +130,11 @@ def stack_emline_model(pars, x, comps = False):
             neiii_amp_broad * gaussian(x, 3870 + neiii_shift, sigma_neiii_broad) + \
             nii_6583_amp_broad * gaussian(x, 6585.23 + hasii_shift, sigma_hasii_broad) +  \
             nii_6583_amp_broad / 3 * gaussian(x, 6550. + hasii_shift, sigma_hasii_broad) + \
-            he1_6678_amp_broad  * gaussian(x, 6680. + hasii_shift, sigma_hasii_broad) 
+            he1_6678_amp_broad  * gaussian(x, 6680. + hasii_shift, sigma_hasii_broad)  +\
+            heii_amp_broad * gaussian(x, 4686.  + heii_shift, sigma_heii_broad) 
 
             
-
+#### 52 parameters, 0-51
             
 
     model = model_narrow + model_broad + cont        
@@ -253,7 +262,7 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
 
 
   
-    pguess= np.zeros(47) 
+    pguess= np.zeros(52) 
     pguess[0] = 1  ### line widths are specified relative to oiii+hb line widths now. 
     pguess[1] = 1 
     pguess[2] = 1
@@ -262,10 +271,12 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     pguess[5] = 1 
     pguess[6] = 1 
     pguess[7] = 1 
+    pguess[47] = 1   ### heii added 1/28/20
 
     ### fwhm of broad component relative to the narrow component. 
     pguess[45]  = 2.0 
 
+    #### amplitudes
     pguess[8] = 0.003
     pguess[9] = 0.001
     pguess[10] = 0.0008
@@ -278,6 +289,7 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     pguess[17] = 0.0003 
     pguess[18] = 0.0000   #### set nii and he1 to zero, even though they are in the model and can be added. 
     pguess[19] = 0.000  ### he1 6678
+    pguess[48] = 0.0003   ### he ii added 1/28/20 
    
     #### wavelength shifts, in rest wavelengths
     pguess[20]  = 0.
@@ -289,11 +301,13 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     pguess[26] = 0.0
     pguess[27] = 0.0
     pguess[28]  = 0.0 
+    pguess[49] = 0.0    ### he ii added 1/28/20 
 
     pguess[29] = 0.00001
     pguess[30]  = -0.01
     pguess[31] = 0.0000 
     pguess[32] = 0.0 
+    pguess[51] = 0.0
     
 
 
@@ -312,6 +326,7 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
         pguess[42] = 0.0002
         pguess[43] = 0.  ###nii 
         pguess[44] = 0.0000 ### he 1 6678
+        pguess[50] = 0.0002   ###  he ii added 1/28/20 
 
 
     else : 
@@ -327,6 +342,7 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
         pguess[42] = 0.0000
         pguess[43] = 0.  ###nii 
         pguess[44] = 0.0000 ### he 1 6678
+        pguess[50]= 0.000   #### he ii added 1/28/20 
 
 
 
@@ -392,11 +408,19 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     parinfo[7]['limits'][0] = 0.5
     parinfo[7]['limits'][1] = 2.0
 
+    parinfo[47]['limited'][0] = 1   ### he ii 
+    parinfo[47]['limited'][1] = 1
+    parinfo[47]['limits'][0] = 0.5
+    parinfo[47]['limits'][1] = 4.0
+
+
+
+
     ### amplitude of broad, relative to amplitude of narrow: 
     parinfo[45]['limited'][0] = 1
     parinfo[45]['limited'][1] = 1
     parinfo[45]['limits'][0] = 1 
-    parinfo[45]['limits'][1] = 10. 
+    parinfo[45]['limits'][1] = 4. 
    
     #### amplitiudes positive     
     parinfo[8]['limited'][0] = 1
@@ -421,6 +445,10 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     parinfo[17]['limits'][0] = 0
    # parinfo[19]['limited'][0] = 1
    # parinfo[19]['limits'][0] = 0
+    parinfo[48]['limited'][0] = 1    ### he ii  
+    parinfo[48]['limits'][0] = 0
+
+
 
     ### wave shifts
     parinfo[20]['limited']  = [1, 1] 
@@ -439,8 +467,13 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     parinfo[26]['limits'] = [-10, 10]
     parinfo[27]['limited']  = [1, 1] 
     parinfo[27]['limits'] = [-10, 10]
-    parinfo[28]['limited']  = [1, 1] 
+    parinfo[28]['limited']  = [1, 1]  
     parinfo[28]['limits'] = [-10, 10]
+    parinfo[49]['limited']  = [1, 1]    ### he ii 
+    parinfo[49]['limits'] = [-10, 10]
+
+   
+
 
     ### residual continuum. 
     parinfo[29]['limited']  = [1, 1] 
@@ -448,7 +481,10 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
     parinfo[30]['limited']  = [1, 1] 
     parinfo[30]['limits'] = [-0.01, 0.01 ]
     parinfo[30]['limited']  = [1, 1] 
-    parinfo[30]['limits'] = [-0.01, 0.01 ]
+    parinfo[30]['limits'] = [-0.01, 0.01 ]  
+    parinfo[51]['limited'] = [1, 1] 
+    parinfo[51]['limits'] = [-0.01, 0.01] 
+
 
     parinfo[31]['fixed'] = 1  ## fix the slope of the continuum around he1/oi to zero; it is fitting in a wacky way. 
     parinfo[32]['fixed'] = 1  ### fix continuum normalization to zero for continuum subtracted spectra. 
@@ -476,6 +512,11 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
        parinfo[41]['limits'][0] = 0
        parinfo[42]['limited'][0] = 1
        parinfo[42]['limits'][0] = 0
+       parinfo[50]['limited'][0] = 1   ### he ii 
+       parinfo[50]['limits'][0] = 0
+
+
+
       # parinfo[44]['limited'][0] = 1
       # parinfo[44]['limits'][0] = 0
 
@@ -490,7 +531,8 @@ def measure_stack(input_stack, input_masterlist, output_meas, output_fig, zmax =
         parinfo[39]['fixed'] = 1
         parinfo[40]['fixed'] = 1
         parinfo[41]['fixed'] = 1
-        parinfo[42]['fixed'] = 1      
+        parinfo[42]['fixed'] = 1   
+        parinfo[50]['fixed'] = 1 
 
     
 
