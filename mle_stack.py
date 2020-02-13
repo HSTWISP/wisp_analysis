@@ -1014,7 +1014,68 @@ def calc_dust_prior(likelihood_func, dust_prior_output):
 
 
 
+def calc_oh_curti(r23 = -1, o32 = -1, r23_err =  -1, o32_err = -1): 
+    ### this function calculates metallicities and uncertainties from curti, using line ratios that have been corrected for dust and stellar absorption.
+    ### this is most useful for making calculations based on values that have been reported in the literature. 
 
+    ### line ratios are in the log; convert to linear units 
+    r23 = 10**r23 
+    o32 = 10**o32 
+    r23_err = r23  * np.log(10) * r23_err 
+    o32_err = o32 * np.log(10) * o32_err 
+
+    delta_oh = 0.01 
+    oh_mod =  np.arange(7.6, 8.9, delta_oh) 
+
+    likelihood = np.zeros(np.size(oh_mod))        
+
+    for i in np.arange(np.size(oh_mod)): 
+
+        xoh = oh_mod[i] - 8.69
+        r23_mod = 10** (0.527 - 1.569 * xoh - 1.652*xoh**2 -0.421 * xoh**3 )    #using r2 negates this, I think.
+        #r2_mod =  10**(0.418 - 0.961 * xoh - 3.505 *xoh**2 - 1.949 * xoh**3)
+        #r3_mod = 1.3 *  10**(-0.277 - 3.549 * xoh - 3.593 * xoh**2 - 0.981 * xoh**3)
+        o32_mod = 1.3  * 10**(-0.691 + - 2.944 * xoh - 1.308 * xoh**2)   ### both o3 lines. 
+
+        ###########3
+        ########### !!!!!!!!!!! fix o32_mod is not logged and o32 generally is.
+        l1 = np.exp(-1 * (o32_mod - o32)**2 / (2 * o32_err**2)) 
+        l2 = np.exp(-1 * (r23_mod - r23)**2 / (2 * r23_err**2)) 
+
+        likelihood[i] = l1 * l2 
+    
+    w=np.where(likelihood == np.max(likelihood))[0] 
+    oh_best  = oh_mod[w] 
+
+    oh_levs=  calc_levels(likelihood) 
+    w=np.where(likelihood >= oh_levs[2]) 
+    oh_1sig_low = oh_mod[w][0] 
+    oh_1sig_high = oh_mod[w][-1]  
+
+    return [oh_best[0], oh_best[0] -  oh_1sig_low, oh_1sig_high - oh_best[0]]
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 
 
 
